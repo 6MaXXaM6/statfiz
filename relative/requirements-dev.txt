@@ -1,0 +1,4 @@
+# Для разработки и проверок (в exe не попадает)
+-r requirements-build.txt
+pytest
+pyflakes

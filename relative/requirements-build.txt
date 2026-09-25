@@ -1,0 +1,3 @@
+# Для сборки exe / исполняемого файла Linux
+-r requirements.txt
+pyinstaller==6.22.3
