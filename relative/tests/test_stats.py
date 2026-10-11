@@ -28,3 +28,49 @@ def test_radius_grows_with_mass_within_bounds():
     assert np.all(np.diff(r[:5]) > 0)
     # отношение радиусов = корень кубический из отношения масс
     assert np.isclose(r[2] / r[1], (28 / 4) ** (1 / 3))
+
+
+def test_lazy_forgetting_matches_explicit():
+    """Ленивое забывание (растущий вес новых отсчётов) даёт то же, что умножение старых на factor."""
+    from model.stats import Histogram
+    rng = np.random.default_rng(1)
+    h = Histogram(0, 10, bins=20)
+    h.RENORMALIZE_AT = 1e6  # чтобы в тесте сработала и перенормировка
+    counts, total, s = np.zeros(20), 0.0, 0.0
+    for _ in range(3000):
+        x = rng.uniform(0, 10)
+        h.forget(0.99)
+        counts *= 0.99
+        total *= 0.99
+        s *= 0.99
+        h.add(x)
+        counts[int(x / 0.5)] += 1
+        total += 1
+        s += x
+    assert np.allclose(h.counts, counts) and np.isclose(h.total, total) and np.isclose(h.mean(), s / total)
+    h.add(rng.uniform(0, 10, 500))  # массив значений
+    assert np.isclose(np.sum(h.density()) * h.width, 1.0)
+
+
+def test_rebin_keeps_samples():
+    from model.stats import Histogram
+    h = Histogram(0, 10, bins=20)
+    h.add(np.random.default_rng(2).uniform(2, 8, 1000))
+    mean, total = h.mean(), h.total
+    h.rebin(0, 20)
+    assert np.isclose(h.total, total) and np.isclose(h.mean(), mean)
+    assert np.isclose(h.counts.sum(), total)  # всё попало в новый диапазон
+    assert np.isclose(h.edges[-1], 20)
+
+
+def test_rebin_to_other_bin_count():
+    from model.stats import Histogram
+    h = Histogram(0, 10, bins=30)
+    h.add(np.random.default_rng(3).uniform(0, 10, 3000))
+    total = h.total
+    h.rebin(0, 10, bins=10)
+    assert len(h.counts) == 10 and np.isclose(h.counts.sum(), total)
+    assert np.isclose(np.sum(h.density()) * h.width, 1.0)
+    # Мельче: веса делятся пропорционально перекрытию — без пустых "через один" столбиков
+    h.rebin(0, 10, bins=40)
+    assert np.isclose(h.counts.sum(), total) and np.all(h.counts > 0)

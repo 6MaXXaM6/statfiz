@@ -7,17 +7,40 @@ class Histogram:
     """Гистограмма с фиксированными границами + точные среднее и дисперсия.
 
     Отсчёты могут "забываться" (forget): тогда total — не число отсчётов, а их суммарный вес.
+
+    Забывание "ленивое": вместо того чтобы на каждом шаге умножать все столбики на
+    factor < 1, новые отсчёты добавляются с растущим весом gain (gain делится на factor).
+    Отношения весов те же, а работы на шаг — одно деление. Наружу (counts, total)
+    всё отдаётся уже поделённым на gain; изредка gain сбрасывается в 1, чтобы не было
+    переполнения.
     """
 
+    RENORMALIZE_AT = 1e100
+
     def __init__(self, low, high, bins=30):
-        self.edges = np.linspace(low, high, bins + 1)
+        self._set_edges(low, high, bins)
         self.reset()
 
+    def _set_edges(self, low, high, bins):
+        self.edges = np.linspace(low, high, bins + 1)
+        self.low = float(low)
+        self.bins = bins
+        self._inv_width = bins / (high - low)
+
     def reset(self):
-        self.counts = np.zeros(len(self.edges) - 1)
-        self.total = 0.0
+        self._counts = np.zeros(self.bins)
+        self._total = 0.0
         self._sum = 0.0
         self._sum_sq = 0.0
+        self._gain = 1.0
+
+    @property
+    def counts(self):
+        return self._counts / self._gain
+
+    @property
+    def total(self):
+        return self._total / self._gain
 
     @property
     def width(self):
@@ -29,44 +52,79 @@ class Histogram:
 
     def forget(self, factor):
         """Экспоненциальное забывание: вес всех прежних отсчётов умножается на factor < 1."""
-        self.counts *= factor
-        self.total *= factor
-        self._sum *= factor
-        self._sum_sq *= factor
+        self._gain /= factor
+        if self._gain > self.RENORMALIZE_AT:
+            self._renormalize()
 
-    def add(self, values):
-        values = np.atleast_1d(np.asarray(values, dtype=float))
-        if values.size == 0:
+    def _renormalize(self):
+        g = self._gain
+        self._counts /= g
+        self._total /= g
+        self._sum /= g
+        self._sum_sq /= g
+        self._gain = 1.0
+
+    def add(self, values, weight=1.0):
+        """Добавить одно значение или массив значений (каждое с весом weight)."""
+        w = weight * self._gain
+        if np.ndim(values) == 0:
+            # Одно число — самый частый случай (каждый шаг): без numpy, сразу в нужный столбик.
+            x = float(values)
+            k = int((x - self.low) * self._inv_width)
+            if 0 <= k < self.bins and x >= self.low:
+                self._counts[k] += w
+            self._total += w
+            self._sum += w * x
+            self._sum_sq += w * x * x
             return
-        counts, _ = np.histogram(values, bins=self.edges)
-        self.counts += counts
-        self.total += values.size
-        self._sum += values.sum()
-        self._sum_sq += np.sum(values ** 2)
+        x = np.asarray(values, dtype=float).ravel()
+        if x.size == 0:
+            return
+        k = np.floor((x - self.low) * self._inv_width).astype(int)
+        inside = (k >= 0) & (k < self.bins)
+        self._counts += np.bincount(k[inside], minlength=self.bins) * w
+        self._total += w * x.size
+        self._sum += w * x.sum()
+        self._sum_sq += w * np.dot(x, x)
+
+    def rebin(self, low, high, bins=None):
+        """Новый диапазон или число столбиков без потери накопленного
+        (например, после изменения температуры).
+
+        Внутри старого столбика отсчёты считаются распределёнными равномерно, и его вес
+        делится между новыми столбиками пропорционально перекрытию (через накопленную
+        сумму, интерполированную на новые границы). То, что вышло за новый диапазон,
+        в столбиках пропадает, но среднее и дисперсия (они считаются по самим значениям)
+        остаются точными.
+        """
+        old_edges = self.edges
+        cumulative = np.concatenate(([0.0], np.cumsum(self._counts)))
+        self._set_edges(low, high, bins or self.bins)
+        self._counts = np.diff(np.interp(self.edges, old_edges, cumulative))
 
     def bin_of(self, value):
         """Номер столбика, в который попадает значение (или None, если за пределами)."""
-        k = int(np.floor((value - self.edges[0]) / self.width))
-        if 0 <= k < len(self.counts):
+        k = int(np.floor((value - self.low) * self._inv_width))
+        if 0 <= k < self.bins:
             return k
         return None
 
     def density(self):
         """Экспериментальная плотность вероятности (нормирована на 1)."""
-        if self.total == 0:
-            return np.zeros_like(self.counts)
-        return self.counts / (self.total * self.width)
+        if self._total == 0:
+            return np.zeros(self.bins)
+        return self._counts / (self._total * self.width)
 
     def mean(self):
-        if self.total == 0:
+        if self._total == 0:
             return float("nan")
-        return self._sum / self.total
+        return self._sum / self._total
 
     def variance(self):
         if self.total < 1.5:
             return float("nan")
-        m = self._sum / self.total
-        return max(self._sum_sq / self.total - m * m, 0.0)
+        m = self._sum / self._total
+        return max(self._sum_sq / self._total - m * m, 0.0)
 
 
 class TimeSeries:

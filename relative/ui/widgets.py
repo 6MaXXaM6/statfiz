@@ -137,7 +137,7 @@ class ParamControl(QtWidgets.QWidget):
 
     changed = QtCore.pyqtSignal(int)
 
-    def __init__(self, title, minimum, maximum, value, show_number=True):
+    def __init__(self, title, minimum, maximum, value, show_number=True, show_slider=True):
         super().__init__()
         self.label = label(title)
         self.slider = QtWidgets.QSlider(QtCore.Qt.Horizontal)
@@ -146,6 +146,7 @@ class ParamControl(QtWidgets.QWidget):
         self.spin.setAlignment(QtCore.Qt.AlignRight)
         self.spin.setKeyboardTracking(False)  # число применяется после Enter
         self.spin.setVisible(show_number)
+        self.slider.setVisible(show_slider)  # без движка — компактно: подпись и число в одну строку
         self.set_range(minimum, maximum)
         self.set_value_silently(value)
 

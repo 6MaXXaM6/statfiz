@@ -72,10 +72,7 @@ def surrogate_l1(k, checks=300, seed=0):
         hist.forget(np.exp(-dt / tau))
         value = np.hypot(*(v[0] - v[1]))
         weight = tau * (1 - np.exp(-dt / tau))
-        k_bin = hist.bin_of(value)
-        if k_bin is not None:
-            hist.counts[k_bin] += weight
-        hist.total += weight
+        hist.add(value, weight=weight)
         t += dt
         v[rng.integers(2)] = rng.normal(size=2)
         if t >= next_check:

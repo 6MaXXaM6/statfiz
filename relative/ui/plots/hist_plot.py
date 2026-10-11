@@ -52,6 +52,7 @@ class HistPlot(StaticPlot):
         self.flash_bars = None
         self.sideways = None
         self.value_label = ""
+        self.density_unit = "с/м"
         self.low, self.high = 0.0, 1.0
         self.exponent = 0
         self.top = 1.0
@@ -97,15 +98,18 @@ class HistPlot(StaticPlot):
         self._draw_curves()
 
     # --- настройка под выбранную величину ---
-    def configure(self, value_label, x, pdf, other_pdf=None, peak=None):
-        """x, pdf — теоретическая кривая (с/м); other_pdf — вторая кривая пунктиром.
-
-        peak — максимум плотности для масштаба оси (по умолчанию — максимум pdf).
+    def configure(self, value_label, x, pdf, other_pdf=None, peak=None, density_unit="с/м", rescale=True):
+        """value_label — подпись оси значений с единицами ("|v₁|, м/с");
+        x, pdf — теоретическая кривая; other_pdf — вторая кривая пунктиром;
+        peak — максимум плотности для масштаба оси (по умолчанию — максимум pdf);
+        density_unit — единица плотности; rescale — показывать плотность в 10ⁿ единиц
+        (для скоростей плотность ~10⁻³ с/м, для энергии этого не нужно).
         """
         self.value_label = value_label
+        self.density_unit = density_unit
         self.low, self.high = x[0], x[-1]
         peak = pdf.max() if peak is None else peak
-        self.exponent = density_exponent(peak)
+        self.exponent = density_exponent(peak) if rescale else 0
         self.top = HEADROOM * peak * self._density_factor()
         self._curves = {"x": x, "pdf": pdf, "other": other_pdf}
         self.flash = np.zeros(0)
@@ -116,8 +120,9 @@ class HistPlot(StaticPlot):
         return 10.0 ** (-self.exponent)
 
     def _apply_axes(self):
-        density = "f, 10%s с/м" % style.sup(self.exponent)  # f — плотность вероятности
-        value = self.value_label + ", м/с" if self.value_label else ""
+        power = "10%s " % style.sup(self.exponent) if self.exponent else ""
+        density = "f, %s%s" % (power, self.density_unit)  # f — плотность вероятности
+        value = self.value_label
         self.set_axis_label("bottom", density if self.sideways else value)
         if not self.sideways:
             self.set_axis_label("left", density)

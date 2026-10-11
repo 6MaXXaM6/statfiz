@@ -1,0 +1,16 @@
+<!DOCTYPE RCC>
+<RCC version="1.0">
+  <!-- Картинки и тексты, встроенные прямо в exe (доступны как ":/assets/...") -->
+  <qresource prefix="/">
+    <file>assets/emblem_left.png</file>
+    <file>assets/emblem_right.png</file>
+    <file>assets/authors.json</file>
+    <file>assets/theory/01_model.html</file>
+    <file>assets/theory/02_projection.html</file>
+    <file>assets/theory/03_modulus.html</file>
+    <file>assets/theory/04_relative.html</file>
+    <file>assets/theory/05_energy.html</file>
+    <file>assets/theory/06_mixture.html</file>
+    <file>assets/theory/07_experiment.html</file>
+  </qresource>
+</RCC>

@@ -1,1 +1,1 @@
-OK collisions=2403 panels=4
+OK collisions=10749 panels=2

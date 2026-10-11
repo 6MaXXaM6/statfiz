@@ -1581,6 +1581,7 @@
    '/home/maximkh/.pyenv/versions/3.8.20/lib/python3.8/typing.py',
    'PYMODULE'),
   ('ui', '/home/maximkh/statfiz/relative/ui/__init__.py', 'PYMODULE'),
+  ('ui.icons', '/home/maximkh/statfiz/relative/ui/icons.py', 'PYMODULE'),
   ('ui.images', '/home/maximkh/statfiz/relative/ui/images.py', 'PYMODULE'),
   ('ui.labels', '/home/maximkh/statfiz/relative/ui/labels.py', 'PYMODULE'),
   ('ui.plots',

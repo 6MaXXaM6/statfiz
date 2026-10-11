@@ -38,8 +38,9 @@ class TimePlot(StaticPlot):
         self.current = self.line(0, style.HILITE, dashed=True)
         self.mean_line = self.line(0, style.THEORY, width=0.1, dotted=True)
 
-    def configure(self, value_label, low, high):
-        self.set_axis_label("left", value_label + ", м/с")
+    def configure(self, axis_label, low, high):
+        """axis_label — подпись оси значений с единицами, например "|v₁|, м/с"."""
+        self.set_axis_label("left", axis_label)
         self.setYRange(low, high, padding=0)
 
     def update_view(self, series, theory_mean=None):

@@ -50,7 +50,7 @@ class AuthorsPage(QtWidgets.QWidget):
         sup = data.get("supervisor")
         if sup:
             info = ", " + sup["info"] if sup.get("info") else ""
-            items.append(label("Научный руководитель: <b>%s</b>%s" % (sup.get("name", ""), info),
+            items.append(label("Преподаватель: <b>%s</b>%s" % (sup.get("name", ""), info),
                                1.2, center=True, wrap=True))
         items += [label(note, center=True, wrap=True, color="#555555") for note in data.get("notes", [])]
         items.append((None, 2))

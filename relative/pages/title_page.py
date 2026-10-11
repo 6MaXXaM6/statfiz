@@ -25,7 +25,7 @@ def emblem_placeholder(size):
 
 
 def emblem(filename):
-    size = style.px(6)
+    size = style.px(7)
     w = QtWidgets.QLabel()
     w.setAlignment(QtCore.Qt.AlignCenter)
     w.setPixmap(load_pixmap(filename, size, size) or emblem_placeholder(size))

@@ -40,34 +40,10 @@ class GasPanel(QtWidgets.QWidget):
         self.temperature.changed.connect(self.temperature_changed)
 
         self.setFont(style.font(0.85))
-        self.grid = QtWidgets.QGridLayout()
-        self.grid.setContentsMargins(0, 0, 0, 0)
-        self.grid.setHorizontalSpacing(style.px(0.5))
-        self.grid.setVerticalSpacing(style.px(0.1))
-        grid_host = QtWidgets.QWidget()
-        grid_host.setLayout(self.grid)
-        self.setLayout(vbox(card(grid_host, title="Газ")))
-        self.set_horizontal(False)
-
-    def set_horizontal(self, horizontal):
-        """Столбиком (колонка справа) или в несколько столбцов (полоса внизу страницы)."""
-        if horizontal:
-            columns = [[self.gas_mode, self.temperature, self.n_total],
-                       [self.mass_a, self.mass_b, self.n_b], [self.pair]]
-        else:
-            columns = [[self.gas_mode, self.temperature, self.n_total, self.mass_a,
-                        self.mass_b, self.n_b, self.pair]]
-        # В нижней полосе место под настройки смеси оставляем и тогда, когда они скрыты:
-        # иначе полоса меняет высоту при переключении "Один газ / Смесь" и графики прыгают.
-        for w in self.mix_widgets:
-            policy = w.sizePolicy()
-            policy.setRetainSizeWhenHidden(horizontal)
-            w.setSizePolicy(policy)
-        while self.grid.count():
-            self.grid.takeAt(0)  # убираем из сетки (сами виджеты остаются)
-        for col, widgets in enumerate(columns):
-            for row, w in enumerate(widgets):
-                self.grid.addWidget(w, row, col)  # addWidget переносит виджет на новое место
+        self.setLayout(vbox(card(
+            self.gas_mode, self.temperature, self.n_total, self.mass_a, *self.mix_widgets,
+            title="Газ", spacing=style.px(0.1),
+        )))
 
     def params(self):
         return GasParams(self.gas_mode.value(), self.mass_a.value(), self.mass_b.value(),

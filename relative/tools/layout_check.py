@@ -63,16 +63,18 @@ def run_frames(app, page, n=30):
 
 
 def scenario(page):
-    """Действия пользователя: (описание, функция)."""
-    from model import theory as tf
-    from model.experiment import GAS_MIX, GAS_PURE, PAIR, SINGLE
+    """Действия пользователя: [(описание, функция), ...]."""
+    from model.experiment import GAS_MIX, GAS_PURE
     run = page.run
 
     def click(button):
         return lambda: button.click()
 
-    def panel(n):
-        return lambda: page.panels[n]
+    def rotate(n):
+        return lambda: page.panels[n].hist_plot.rotate_button.click()
+
+    def show(n, obj, kind):
+        return lambda: page.panels[n].show_quantity(obj, kind)
 
     return [
         ("Старт", click(run.btn_start)),
@@ -80,24 +82,26 @@ def scenario(page):
         ("Медленно", click(run.mode.buttons["slow"])),
         ("Пауза", click(run.btn_pause)),
         ("Продолжить", click(run.btn_pause)),
-        ("↻ график 1", lambda: page.panels[0].hist_plot.rotate_button.click()),
-        ("↻ график 1 обратно", lambda: page.panels[0].hist_plot.rotate_button.click()),
+        ("↻ график 1 (только распределение)", rotate(0)),
+        ("↻ график 1 обратно", rotate(0)),
         ("Добавить график 2", click(page.add_button)),
-        ("↻ график 2", lambda: page.panels[1].hist_plot.rotate_button.click()),
-        ("график 2: v₂,x", lambda: page.panels[1].selector.setCurrentIndex(5)),
+        ("график 2: E₁", show(1, "single", "energy")),
+        ("↻ график 2", rotate(1)),
+        ("график 2: v₂,x", show(1, "second", "projection")),
         ("Смесь", click(page.gas.gas_mode.buttons[GAS_MIX])),
         ("Пара A–B", click(page.gas.pair.buttons["AB"])),
-        ("Добавить график 3", click(page.add_button)),
-        ("Добавить график 4", click(page.add_button)),
-        ("↻ график 4", lambda: page.panels[3].hist_plot.rotate_button.click()),
-        ("Быстро (4 графика)", click(run.mode.buttons["fast"])),
-        ("Один газ (4 графика)", click(page.gas.gas_mode.buttons[GAS_PURE])),
-        ("✕ график 4", lambda: page.remove_panel(page.panels[3])),
-        ("✕ график 3", lambda: page.remove_panel(page.panels[2])),
-        ("Медленно (2 графика)", click(run.mode.buttons["slow"])),
+        ("график 1: E₂", show(0, "second", "energy")),
+        ("Быстро (2 графика)", click(run.mode.buttons["fast"])),
+        ("Один газ", click(page.gas.gas_mode.buttons[GAS_PURE])),
+        ("✕ график 2", lambda: page.remove_panel(page.panels[1])),
+        ("Добавить график 2 снова", click(page.add_button)),
+        ("Медленно", click(run.mode.buttons["slow"])),
         ("Стоп", click(run.btn_stop)),
         ("Старт снова", click(run.btn_start)),
-    ] + extremes(page), (tf, PAIR, SINGLE, panel)
+        ("⛶ графики на весь экран", click(page.zoom_button)),
+        ("↻ график 1 (на весь экран)", rotate(0)),
+        ("↙ вернуть", click(page.zoom_button)),
+    ] + extremes(page)
 
 
 def set_param(control, value):
@@ -120,8 +124,13 @@ def extremes(page):
         ("щелчок: молекула 1", lambda: page.on_box_clicked(20, 20, 1)),
         ("щелчок: молекула 2", lambda: page.on_box_clicked(80, 80, 2)),
         ("N = 2", set_param(gas.n_total, 2)),
+        ("столбиков: 80", set_param(page.bins, 80)),
+        ("столбиков: 10", set_param(page.bins, 10)),
+        ("память: 5000", set_param(page.memory, 5000)),
+        ("память: 10", set_param(page.memory, 10)),
     ]
-    for n in range(6):
+    from pages.demo.graph_panel import QUANTITIES
+    for n in range(len(QUANTITIES)):
         steps.append(("график 1: величина %d" % n, lambda n=n: page.panels[0].selector.setCurrentIndex(n)))
         steps.append(("график 2: величина %d" % n, lambda n=n: page.panels[1].selector.setCurrentIndex(n)))
     return steps
@@ -141,7 +150,7 @@ def check(screen):
     app.processEvents()
     page = win.demo
     bad = 0
-    actions, _ = scenario(page)
+    actions = scenario(page)
     for name, action in actions:
         action()
         page.run.timer.stop()

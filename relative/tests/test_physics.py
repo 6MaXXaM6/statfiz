@@ -82,3 +82,56 @@ def test_histogram_density_normalised():
     h.add(np.random.default_rng(0).uniform(0, 10, 10000))
     assert np.isclose(np.sum(h.density()) * h.width, 1.0)
     assert h.bin_of(0.1) == 0 and h.bin_of(9.99) == 19 and h.bin_of(11) is None
+
+
+def test_energy_pdf_is_normalised():
+    kt = 4.14
+    e = np.linspace(0, 60 * kt, 200001)
+    for kind, x, s in ((tf.ENERGY, e, kt), (tf.MODULUS, np.linspace(0, 3000, 200001), 400.0)):
+        assert np.isclose(np.trapz(tf.pdf(kind, x, s), x), 1.0, atol=1e-3)
+    assert tf.mean(tf.ENERGY, kt) == kt and tf.variance(tf.ENERGY, kt) == kt ** 2
+
+
+def test_mean_energy_is_kT_in_equilibrium():
+    """В двумерном газе средняя кинетическая энергия молекулы равна kT (две степени свободы)."""
+    from model.experiment import ENERGY_UNIT, SINGLE, Experiment
+    exp = Experiment(seed=5)
+    exp.ensemble = True
+    exp.advance(3000)
+    hist = exp.hist[SINGLE, tf.ENERGY]
+    kt = K_B * exp.temperature / ENERGY_UNIT
+    assert np.isclose(exp.scale(SINGLE, tf.ENERGY), kt)
+    assert abs(hist.mean() - kt) < 0.05 * kt
+
+
+def test_temperature_and_mass_change_keep_statistics():
+    """Температура и массы меняются без сброса статистики; газ остаётся тем же."""
+    from model.experiment import PAIR, Experiment
+    exp = Experiment(seed=7)
+    exp.advance(500)
+    hist = exp.hist[PAIR, tf.MODULUS]
+    total = hist.total
+    gas = exp.gas
+    exp.set_temperature(600)
+    assert exp.gas is gas and np.isclose(hist.total, total)
+    assert np.isclose(hist.edges[-1], exp.value_range(tf.MODULUS, PAIR)[1])
+    assert np.isclose(gas.kinetic_energy(), gas.n * K_B * 600)
+
+    energy_before = 0.5 * gas.mass * np.sum(gas.vel ** 2, axis=1)
+    exp.configure_gas(exp.gas_mode, 4, exp.mass_b, exp.n_total, exp.n_b_mix)  # только масса A
+    assert exp.gas is gas and exp.hist[PAIR, tf.MODULUS] is hist
+    assert np.allclose(0.5 * gas.mass * np.sum(gas.vel ** 2, axis=1), energy_before)  # T сохранилась
+    assert np.allclose(gas.mass, 4) and len(gas.find_close_pairs()[0]) == 0  # перекрытий нет
+
+    exp.configure_gas(exp.gas_mode, 4, exp.mass_b, 100, exp.n_b_mix)  # другое число молекул — новый газ
+    assert exp.gas is not gas and exp.hist[PAIR, tf.MODULUS].total == 0
+
+
+def test_memory_setting_keeps_statistics():
+    from model.experiment import PAIR, Experiment
+    exp = Experiment(seed=8)
+    exp.advance(300)
+    hist = exp.hist[PAIR, tf.MODULUS]
+    total, tau = hist.total, exp.memory_time
+    exp.set_memory(30)
+    assert np.isclose(hist.total, total) and np.isclose(exp.memory_time, tau / 10)

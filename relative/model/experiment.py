@@ -9,7 +9,7 @@ import time
 import numpy as np
 
 from model import theory as tf
-from model.physics import MAX_PARTICLES, Gas
+from model.physics import AMU, K_B, MAX_PARTICLES, Gas
 from model.stats import Histogram, TimeSeries
 
 # Что наблюдаем
@@ -17,12 +17,16 @@ SINGLE = "single"  # молекула 1
 SECOND = "second"  # молекула 2
 PAIR = "pair"      # относительная скорость молекул 1 и 2: v_отн = v1 - v2
 OBJECTS = (PAIR, SINGLE, SECOND)
+KINDS = (tf.MODULUS, tf.PROJECTION, tf.ENERGY)
+
+ENERGY_UNIT = 1e-21  # энергия показывается в единицах 10⁻²¹ Дж (kT при 300 К ≈ 4.1)
 
 # Состав газа
 GAS_PURE = "pure"  # только газ A
 GAS_MIX = "mix"    # смесь газов A и B (при N_B = 1 — одна "чужая" молекула в газе A)
 
-HIST_BINS = 30
+HIST_BINS = 30            # число столбиков гистограмм по умолчанию
+BINS_RANGE = (10, 80)     # сколько столбиков можно выбрать
 ENSEMBLE_EVERY = 10  # как часто (в шагах) добавлять статистику по всем молекулам
 
 # Память статистики: старые отсчёты забываются экспоненциально, exp(-t/tau),
@@ -31,6 +35,7 @@ ENSEMBLE_EVERY = 10  # как часто (в шагах) добавлять ст
 # (30 столбиков) и теорией — медиана 0.26 при K=100, 0.15 при K=300, 0.08 при K=1000.
 # K=300 — шум уже мал, а память ещё короткая (~7.6 нс при 300 К: ~40 с быстрого режима).
 MEMORY_COLLISIONS = 300
+MEMORY_RANGE = (10, 5000)  # сколько столкновений памяти можно выбрать в настройках
 
 
 class Experiment:
@@ -46,6 +51,7 @@ class Experiment:
         self.pair_type = "AA"
         self.ensemble = False  # добавлять ли статистику по всем молекулам (быстрый режим)
         self.memory_collisions = MEMORY_COLLISIONS
+        self.bins = HIST_BINS
         self.rebuild()
 
     # ------------------------------------------------------------------
@@ -57,13 +63,29 @@ class Experiment:
         return int(min(max(self.n_b_mix, 1), self.n_total - 1))
 
     def configure_gas(self, gas_mode, mass_a, mass_b, n_total, n_b):
-        """Новый состав газа (газ создаётся заново)."""
+        """Новые параметры газа.
+
+        Если изменились только массы — газ остаётся тем же, статистика сохраняется
+        (см. set_masses). Если изменились число или состав молекул — газ создаётся заново.
+        """
+        same_molecules = (gas_mode, n_total, n_b) == (self.gas_mode, self.n_total, self.n_b_mix)
+        if same_molecules:
+            self.set_masses(mass_a, mass_b)
+            return
         self.gas_mode = gas_mode
         self.mass_a = mass_a
         self.mass_b = mass_b
         self.n_total = n_total
         self.n_b_mix = n_b
         self.rebuild()
+
+    def set_masses(self, mass_a, mass_b):
+        """Изменить массы, не начиная опыт заново: статистика не сбрасывается,
+        старые отсчёты постепенно забываются, и видно, как газ приходит к новому равновесию."""
+        self.mass_a = mass_a
+        self.mass_b = mass_b
+        self.gas.set_masses(mass_a, mass_b)
+        self._rescale_stats()
 
     def rebuild(self):
         """Создаёт газ заново с текущими параметрами."""
@@ -114,9 +136,10 @@ class Experiment:
         self.reset_stats()
 
     def set_temperature(self, temperature):
+        """Изменить температуру, не сбрасывая статистику (как и для масс)."""
         self.temperature = temperature
         self.gas.set_temperature(temperature)
-        self.reset_stats()
+        self._rescale_stats()
 
     # ------------------------------------------------------------------
     # Теория для выбранных молекул
@@ -141,8 +164,14 @@ class Experiment:
         """sqrt(kT/m) для молекулы или sqrt(kT/mu) для пары, м/с."""
         return tf.sigma_for(self.mass(obj), self.temperature)
 
+    def scale(self, obj, kind):
+        """Масштаб распределения: sqrt(kT/m) для скоростей, kT для энергии (в ENERGY_UNIT)."""
+        if kind == tf.ENERGY:
+            return K_B * self.temperature / ENERGY_UNIT
+        return self.sigma(obj)
+
     def value_range(self, kind, obj):
-        return tf.value_range(kind, self.sigma(obj))
+        return tf.value_range(kind, self.scale(obj, kind))
 
     def max_speed_scale(self):
         """Наибольшее из sqrt(kT/m) для векторов v1, v2 и v_отн на диаграмме."""
@@ -159,12 +188,30 @@ class Experiment:
     def reset_stats(self):
         self.hist = {}
         self.series = {}
-        for kind in (tf.MODULUS, tf.PROJECTION):
+        for kind in KINDS:
             for obj in OBJECTS:
                 low, high = self.value_range(kind, obj)
-                self.hist[obj, kind] = Histogram(low, high, HIST_BINS)
+                self.hist[obj, kind] = Histogram(low, high, self.bins)
                 self.series[obj, kind] = TimeSeries()
         self.steps_since_reset = 0
+        self._memory_time = self.memory_time
+
+    def set_memory(self, collisions):
+        """Сколько столкновений помнит статистика; накопленное не сбрасывается."""
+        self.memory_collisions = int(collisions)
+        self._memory_time = self.memory_time
+
+    def set_bins(self, bins):
+        """Другое число столбиков; накопленная статистика переносится в новые столбики."""
+        self.bins = int(bins)
+        for hist in self.hist.values():
+            hist.rebin(hist.edges[0], hist.edges[-1], self.bins)
+
+    def _rescale_stats(self):
+        """После изменения T или масс: перенести гистограммы на новые диапазоны значений
+        и пересчитать время памяти (оно зависит от частоты столкновений)."""
+        for (obj, kind), hist in self.hist.items():
+            hist.rebin(*self.value_range(kind, obj))
         self._memory_time = self.memory_time
 
     def velocity(self, obj):
@@ -173,17 +220,26 @@ class Experiment:
         v2 = self.gas.vel[self.j]
         return {SINGLE: v1, SECOND: v2, PAIR: v1 - v2}[obj]
 
+    def _values(self, obj, v):
+        """Модуль, проекция и кинетическая энергия для скорости v (вектор или массив векторов).
+
+        Энергия: m·|v|²/2, для пары — mu·|v_отн|²/2 (энергия относительного движения).
+        """
+        v = np.asarray(v)
+        speed_sq = v[..., 0] ** 2 + v[..., 1] ** 2
+        energy = 0.5 * self.mass(obj) * AMU * speed_sq / ENERGY_UNIT
+        return {tf.MODULUS: np.sqrt(speed_sq), tf.PROJECTION: v[..., 0], tf.ENERGY: energy}
+
     def _sample_selected(self):
         t = self.gas.time
         for obj in OBJECTS:
-            v = self.velocity(obj)
-            for kind, x in ((tf.MODULUS, np.hypot(v[0], v[1])), (tf.PROJECTION, v[0])):
+            for kind, x in self._values(obj, self.velocity(obj)).items():
                 self.hist[obj, kind].add(x)
-                self.series[obj, kind].add(t, x)
+                self.series[obj, kind].add(t, float(x))
 
     def _add_ensemble(self, obj, velocities):
-        self.hist[obj, tf.MODULUS].add(np.hypot(velocities[:, 0], velocities[:, 1]))
-        self.hist[obj, tf.PROJECTION].add(velocities[:, 0])
+        for kind, x in self._values(obj, velocities).items():
+            self.hist[obj, kind].add(x)
 
     def _sample_ensemble(self):
         """Та же статистика, но сразу по многим молекулам того же сорта, что и выбранные."""

@@ -124,6 +124,34 @@ class Gas:
             self.vel *= np.sqrt(target / current)
         self.dt = self.recommended_dt()
 
+    def set_masses(self, mass_a, mass_b):
+        """Новые массы без пересоздания газа: молекулы остаются на местах.
+
+        Радиусы меняются вслед за массами. Скорости умножаются на sqrt(m_старая / m_новая),
+        так что энергия каждой молекулы, а значит и температура, сохраняются; меняется
+        только распределение скоростей — газ сам придёт к новому равновесию.
+        """
+        old = self.mass
+        self.mass = np.where(self.species == 0, float(mass_a), float(mass_b))
+        self.radius = radius_for_mass(self.mass)
+        self.vel *= np.sqrt(old / self.mass)[:, None]
+        self.separate_overlaps()
+        self.dt = self.recommended_dt()
+
+    def separate_overlaps(self, max_rounds=200):
+        """Раздвинуть перекрывшиеся диски (например, после того как радиусы выросли)."""
+        for _ in range(max_rounds):
+            ii, jj = self.find_close_pairs()
+            if len(ii) == 0:
+                return
+            for i, j in zip(ii, jj):
+                d = self.pos[j] - self.pos[i]
+                dist = np.hypot(d[0], d[1])
+                if dist > 0:
+                    self._push_apart(i, j, d / dist, dist)
+            for axis in (0, 1):
+                np.clip(self.pos[:, axis], self.radius, self.box - self.radius, out=self.pos[:, axis])
+
     def recommended_dt(self):
         """Шаг по времени (пс): быстрая молекула за шаг смещается не более чем на 1/4 радиуса."""
         v_fast = 4.0 * thermal_sigma(self.mass.min(), self.temperature)
@@ -198,11 +226,14 @@ class Gas:
                 self.vel[i] += (2.0 * mj / (mi + mj)) * vn * normal
                 self.vel[j] -= (2.0 * mi / (mi + mj)) * vn * normal
                 self.collisions += 1
-            # Раздвигаем перекрывшиеся диски (на скорости и энергию не влияет).
-            overlap = self.radius[i] + self.radius[j] - dist
-            if overlap > 0:
-                self.pos[i] -= 0.5 * overlap * normal
-                self.pos[j] += 0.5 * overlap * normal
+            self._push_apart(i, j, normal, dist)
+
+    def _push_apart(self, i, j, normal, dist):
+        """Раздвинуть перекрывшиеся диски i и j вдоль линии центров (на скорости и энергию не влияет)."""
+        overlap = self.radius[i] + self.radius[j] - dist
+        if overlap > 0:
+            self.pos[i] -= 0.5 * overlap * normal
+            self.pos[j] += 0.5 * overlap * normal
 
     def collision_time(self, k):
         """Среднее время (пс) между столкновениями молекулы k — оценка кинетической теории (2D).

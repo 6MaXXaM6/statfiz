@@ -62,9 +62,9 @@ class MainWindow(QtWidgets.QMainWindow):
 
 def smoke_test(app, window, report_path):
     """Проверка собранной программы: открыть все страницы, посчитать несколько секунд
-    в быстром режиме с четырьмя графиками и записать результат в файл report_path."""
+    в быстром режиме с двумя графиками (второй — энергия молекулы) и записать результат
+    в файл report_path."""
     def finish():
-        print("DBG finish", flush=True)
         demo = window.demo
         ok = demo.exp.gas.collisions > 0 and all(p.quantity for p in demo.panels)
         with open(report_path, "w", encoding="utf-8") as f:
@@ -72,20 +72,22 @@ def smoke_test(app, window, report_path):
         app.quit()
 
     def start():
-        print("DBG start", flush=True)
         for show in (window.show_theory, window.show_authors, window.show_title, window.show_demo):
             show()
-        for _ in range(3):
-            window.demo.add_next_panel()
+        window.demo.add_next_panel()
+        window.demo.panels[1].show_quantity("single", "energy")
         window.demo.run.mode.buttons["fast"].click()
         window.demo.run.btn_start.click()
-        print("DBG start done", flush=True)
         QtCore.QTimer.singleShot(4000, finish)
 
     QtCore.QTimer.singleShot(500, start)
 
 
 def main():
+    if "--smoke-test" in sys.argv:
+        # Проверка идёт без окна на экране. Задаём это здесь, а не переменной окружения:
+        # под wine переменные Linux в Windows-программу не передаются.
+        os.environ["QT_QPA_PLATFORM"] = "offscreen"
     app = QtWidgets.QApplication(sys.argv)
     style.init_style(app)
     window = MainWindow()

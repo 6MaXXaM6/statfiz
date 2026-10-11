@@ -23,7 +23,8 @@ getattr(win, "show_" + page)()
 d = win.demo
 QUANT = {"vrel": ("pair", "modulus"), "vrelx": ("pair", "projection"),
          "v1": ("single", "modulus"), "v1x": ("single", "projection"),
-         "v2": ("second", "modulus"), "v2x": ("second", "projection")}
+         "v2": ("second", "modulus"), "v2x": ("second", "projection"),
+         "e1": ("single", "energy"), "e2": ("second", "energy")}
 for opt in extra:
     key, _, val = opt.partition("=")
     if key == "fast":
@@ -32,8 +33,7 @@ for opt in extra:
     elif key == "add":            # add=v1 — второй график
         d.add_panel(*QUANT[val])
     elif key == "first":          # first=vrelx — что в первом графике
-        from pages.demo.graph_panel import QUANTITIES
-        d.panels[0].selector.setCurrentIndex(QUANTITIES.index(QUANT[val]))
+        d.panels[0].show_quantity(*QUANT[val])
     elif key == "rotate":
         d.panels[0].rotate()
     elif key == "mix":

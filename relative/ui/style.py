@@ -44,6 +44,27 @@ def font(k=1.0, bold=False):
     return f
 
 
+def light_palette():
+    """Светлая палитра для всех виджетов (поля ввода, списки, подсказки)."""
+    colors = {
+        QtGui.QPalette.Window: PAGE_BG, QtGui.QPalette.WindowText: "#111111",
+        QtGui.QPalette.Base: "#ffffff", QtGui.QPalette.AlternateBase: "#f3f5f9",
+        QtGui.QPalette.Text: "#111111", QtGui.QPalette.PlaceholderText: "#b8c0cc",
+        QtGui.QPalette.Button: "#eef2f8", QtGui.QPalette.ButtonText: "#111111",
+        QtGui.QPalette.Highlight: "#2d5fb3", QtGui.QPalette.HighlightedText: "#ffffff",
+        QtGui.QPalette.ToolTipBase: "#ffffe8", QtGui.QPalette.ToolTipText: "#111111",
+        QtGui.QPalette.Light: "#ffffff", QtGui.QPalette.Midlight: "#e4e8f0",
+        QtGui.QPalette.Mid: "#b0bac9", QtGui.QPalette.Dark: "#8a9bb8", QtGui.QPalette.Shadow: "#5a6a8a",
+    }
+    palette = QtGui.QPalette()
+    for role, color in colors.items():
+        palette.setColor(role, QtGui.QColor(color))
+        palette.setColor(QtGui.QPalette.Disabled, role, QtGui.QColor(color))
+    for role in (QtGui.QPalette.WindowText, QtGui.QPalette.Text, QtGui.QPalette.ButtonText):
+        palette.setColor(QtGui.QPalette.Disabled, role, QtGui.QColor("#999999"))
+    return palette
+
+
 def init_style(app):
     """Подбирает размер шрифта под экран и настраивает Qt и pyqtgraph."""
     global BASE
@@ -60,6 +81,7 @@ def init_style(app):
     f.setPixelSize(BASE)
     app.setFont(f)
     app.setStyle("Fusion")
+    app.setPalette(light_palette())  # своя светлая палитра: тёмная тема системы не должна "протекать"
 
     pg.setConfigOptions(antialias=True, background="w", foreground="k")
 
@@ -91,7 +113,9 @@ def init_style(app):
             font-size: %(big)dpx; font-weight: bold; padding: %(bp)dpx;
             border-width: 3px; border-radius: %(br)dpx;
         }
-        QSpinBox, QDoubleSpinBox { border: 2px solid #8a9bb8; padding: 2px; }
+        QSpinBox, QDoubleSpinBox, QComboBox {
+            border: 2px solid #8a9bb8; border-radius: %(r)dpx; padding: 2px; background: #ffffff; color: #111111;
+        }
         QSlider::groove:horizontal { height: %(gh)dpx; background: #d0d8e8; border-radius: %(gr)dpx; }
         QSlider::handle:horizontal {
             background: #2d5fb3; width: %(hw)dpx; margin: -%(hm)dpx 0; border-radius: %(hr)dpx;
