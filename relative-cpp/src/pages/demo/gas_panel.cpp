@@ -43,7 +43,7 @@ GasPanel::GasPanel(const Experiment& exp)
     connect(pair, &Choice::changed, this, &GasPanel::pair_chosen);
     connect(temperature, &ParamControl::changed, this, &GasPanel::temperature_changed);
 
-    setFont(style::font(0.85));
+    setFont(style::font(settings::GAS_PANEL_FONT));
     // start и collisions в карточку "Газ" не входят: их ставит страница под кнопки
     // "Старт / Пауза" (это выбор опыта, а справа при смеси и так тесно).
     setLayout(vbox({card({gas_mode, temperature, n_total, mass_a, mass_b, n_b, pair},

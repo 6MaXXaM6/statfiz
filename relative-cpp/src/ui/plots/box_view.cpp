@@ -7,7 +7,6 @@
 #include "settings.h"
 #include "ui/style.h"
 
-constexpr double ARROW_HEAD = 3.0;     // наконечник стрелки, нм
 
 BoxView::BoxView(QWidget* parent) : CanvasBase(parent)
 {
@@ -60,7 +59,7 @@ void BoxView::draw_world(QPainter& p)
         p.setBrush(QColor(color));
         p.drawEllipse(map(pos.x, pos.y), r, r);
         Vec2 tip = pos + gas.vel[n] * arrow_scale;
-        draw_arrow(p, map(pos.x, pos.y), map(tip.x, tip.y), ARROW_HEAD * k, QColor(color));
+        draw_arrow(p, map(pos.x, pos.y), map(tip.x, tip.y), settings::ARROW_HEAD * k, QColor(color));
     }
 }
 

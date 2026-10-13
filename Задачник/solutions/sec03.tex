@@ -1,0 +1,270 @@
+\section*{§3. Термодинамические потенциалы}
+\addcontentsline{toc}{section}{§3. Термодинамические потенциалы}
+
+\begin{basics}
+\sub{Четыре потенциала и их «родные» переменные}
+\begin{tabular}{@{}lll@{}}
+$U(S,V)$ & внутренняя энергия & $\dd U=T\dd S-p\dd V$\\
+$F(T,V)=U-TS$ & свободная энергия & $\dd F=-S\dd T-p\dd V$\\
+$H(S,p)=U+pV$ & энтальпия & $\dd H=T\dd S+V\dd p$\\
+$G(T,p)=U-TS+pV$ & потенциал Гиббса & $\dd G=-S\dd T+V\dd p$
+\end{tabular}
+\\Равенства — для обратимых процессов (для необратимых вместо $=$ стоит $\le$).
+$U(S,V)$ — та же внутренняя энергия, что в §1, но записанная через $S$ и $V$: тогда $T=U'_S$, $p=-U'_V$.\\
+Потенциалом функция является только в своих переменных: $F$ — в $(T,V)$, $G$ — в $(T,p)$ и т.д.
+
+\sub{Первые производные (читаются прямо с дифференциалов)}
+\[T=\Big(\frac{\partial U}{\partial S}\Big)_V=\Big(\frac{\partial H}{\partial S}\Big)_p,\quad
+p=-\Big(\frac{\partial U}{\partial V}\Big)_S=-\Big(\frac{\partial F}{\partial V}\Big)_T,\]
+\[S=-\Big(\frac{\partial F}{\partial T}\Big)_V=-\Big(\frac{\partial G}{\partial T}\Big)_p,\quad
+V=\Big(\frac{\partial H}{\partial p}\Big)_S=\Big(\frac{\partial G}{\partial p}\Big)_T.\]
+Зная один потенциал в своих переменных, получаем всё: например, из $F(T,V)$: $p=-F'_V$ — уравнение состояния,
+$S=-F'_T$, $U=F+TS$.
+
+\sub{Соотношения Максвелла (равенство смешанных производных)}
+\[\Big(\frac{\partial S}{\partial V}\Big)_T=\Big(\frac{\partial p}{\partial T}\Big)_V\ (\text{из }F),\qquad
+\Big(\frac{\partial S}{\partial p}\Big)_T=-\Big(\frac{\partial V}{\partial T}\Big)_p\ (\text{из }G),\]
+\[\Big(\frac{\partial T}{\partial V}\Big)_S=-\Big(\frac{\partial p}{\partial S}\Big)_V\ (\text{из }U),\qquad
+\Big(\frac{\partial T}{\partial p}\Big)_S=\Big(\frac{\partial V}{\partial S}\Big)_p\ (\text{из }H).\]
+Самые нужные — первые две: они заменяют неизмеримую производную энтропии на производную из уравнения состояния.
+
+\sub{Теплоёмкости и полезные формулы}
+$\widetilde C$ — теплоёмкость всего тела (Дж/К), $C$ без тильды — молярная.
+\[\widetilde C_V=T\Big(\frac{\partial S}{\partial T}\Big)_V,\qquad \widetilde C_p=T\Big(\frac{\partial S}{\partial T}\Big)_p,\]
+\[\Big(\frac{\partial U}{\partial V}\Big)_T=T\Big(\frac{\partial p}{\partial T}\Big)_V-p,\qquad
+\Big(\frac{\partial H}{\partial p}\Big)_T=V-T\Big(\frac{\partial V}{\partial T}\Big)_p,\]
+\[\widetilde C_p-\widetilde C_V=T\Big(\frac{\partial p}{\partial T}\Big)_V\Big(\frac{\partial V}{\partial T}\Big)_p.\]
+Уравнения Гиббса–Гельмгольца: $U=F-T\big(\frac{\partial F}{\partial T}\big)_V$, $H=G-T\big(\frac{\partial G}{\partial T}\big)_p$.
+
+\sub{Математика: как переставлять производные}
+\begin{itemize}
+\item Тройное произведение: $\big(\frac{\partial x}{\partial y}\big)_z\big(\frac{\partial y}{\partial z}\big)_x\big(\frac{\partial z}{\partial x}\big)_y=-1$, т.е.
+$\big(\frac{\partial x}{\partial y}\big)_z=-\dfrac{(\partial z/\partial y)_x}{(\partial z/\partial x)_y}$.
+\item Обратная производная: $\big(\frac{\partial x}{\partial y}\big)_z=1\big/\big(\frac{\partial y}{\partial x}\big)_z$.
+\item Смена постоянной переменной: $\big(\frac{\partial x}{\partial y}\big)_z=\big(\frac{\partial x}{\partial y}\big)_w+\big(\frac{\partial x}{\partial w}\big)_y\big(\frac{\partial w}{\partial y}\big)_z$.
+\end{itemize}
+\textbf{Как доказывать тождество:} (1) производную с $S=\mathrm{const}$ переписать через тройное произведение;
+(2) $(\partial S/\partial T)$ заменить на $\widetilde C/T$; (3) $(\partial S/\partial V)_T$, $(\partial S/\partial p)_T$ — по Максвеллу.
+
+\sub{Равновесие и работа}
+Изолированная система: $S\to\max$. При $T,V=\mathrm{const}$: $F\to\min$; при $T,p=\mathrm{const}$: $G\to\min$.
+Изотермический процесс: $A\le-\Delta F$ ($A_{\max}=-\Delta F$). Изобарический: $Q=\Delta H$.
+\end{basics}
+
+%-------------------------------------------------------------
+\begin{problem}{3.1}{exdz}{Найти потенциал Гиббса $G$ и свободную энергию $F$ для $\nu$ молей идеального газа.}
+\textbf{Найти:} $F(T,V)$ и $G(T,p)$.
+
+\textbf{1. Исходные $U$ и $S$ идеального газа} ($C_V$ — молярная теплоёмкость, $S_0$ — константа):
+\[U=\nu C_VT,\qquad S=\nu\,(C_V\ln T+R\ln V+S_0).\]
+
+\textbf{2. Свободная энергия} $F=U-TS$:
+\[F(T,V)=\nu\big[C_VT-T(C_V\ln T+R\ln V+S_0)\big]=\nu\big[C_VT(1-\ln T)-RT\ln V-TS_0\big].\]
+
+\textbf{3. Потенциал Гиббса} $G=F+pV$, где $pV=\nu RT$. Его надо выразить через $T,p$: подставляем $V=\nu RT/p$, т.е.
+$\ln V=\ln T-\ln p+\ln(\nu R)$:
+\[G=\nu\big[C_VT-C_VT\ln T-RT\ln T+RT\ln p-RT\ln(\nu R)-TS_0+RT\big].\]
+Собираем, учитывая $C_V+R=C_p$, и обозначаем $S_0'=S_0+R\ln(\nu R)$:
+\[G(T,p)=\nu\big[C_pT(1-\ln T)+RT\ln p-TS_0'\big].\]
+\textit{Проверка:} $V=(\partial G/\partial p)_T=\nu RT/p$ — верно.
+\answer{$F=\nu[C_VT(1-\ln T)-RT\ln V-TS_0]$,\quad $G=\nu[C_pT(1-\ln T)+RT\ln p-TS_0']$.}
+\end{problem}
+
+%-------------------------------------------------------------
+\begin{problem}{3.2}{ex}{Найти уравнение состояния одного моля газа, если его энтальпия $H=C_pp^{(\gamma-1)/\gamma}\exp[(S-S_0)/C_p]$, где
+$C_p$ — молярная теплоёмкость при постоянном давлении, $S_0$ — константа, $\gamma=C_p/C_V$.}
+\textbf{Найти:} связь $p,V,T$.
+
+\textbf{1.} $H$ дана в своих переменных $(S,p)$, поэтому $T=(\partial H/\partial S)_p$, $V=(\partial H/\partial p)_S$:
+\[T=p^{(\gamma-1)/\gamma}e^{(S-S_0)/C_p},\qquad
+V=C_p\,\frac{\gamma-1}{\gamma}\,p^{-1/\gamma}e^{(S-S_0)/C_p}.\]
+
+\textbf{2.} Делим, чтобы исключить $S$: $\dfrac TV=\dfrac{\gamma\,p}{C_p(\gamma-1)}=\dfrac{p}{C_p-C_V}=\dfrac pR$
+(так как $C_p(\gamma-1)/\gamma=C_p-C_V=R$).
+\answer{$pV=RT$ — идеальный газ.}
+\end{problem}
+
+%-------------------------------------------------------------
+\begin{problem}{3.3}{exdz}{Показать, что теплоёмкость вещества при постоянном давлении $p$, объём $V$ которого линейно зависит от температуры
+$T$, не зависит от величины $p$.}
+\textbf{Найти (доказать):} $(\partial\widetilde C_p/\partial p)_T=0$, если $V=a(p)+b(p)T$.
+
+\textbf{1.} По определению $\widetilde C_p=T(\partial S/\partial T)_p$. Дифференцируем по $p$ при $T=\mathrm{const}$ и меняем порядок дифференцирования:
+\[\Big(\frac{\partial\widetilde C_p}{\partial p}\Big)_T=T\,\frac{\partial^2S}{\partial p\,\partial T}
+=T\,\frac{\partial}{\partial T}\Big(\frac{\partial S}{\partial p}\Big)_T.\]
+
+\textbf{2.} По Максвеллу $(\partial S/\partial p)_T=-(\partial V/\partial T)_p$:
+\[\Big(\frac{\partial\widetilde C_p}{\partial p}\Big)_T=-T\Big(\frac{\partial^2V}{\partial T^2}\Big)_p.\]
+
+\textbf{3.} $V$ линеен по $T$ $\Rightarrow$ $(\partial^2V/\partial T^2)_p=0$.
+\answer{$(\partial\widetilde C_p/\partial p)_T=-T(\partial^2V/\partial T^2)_p=0$, т.е.\ $\widetilde C_p$ от $p$ не зависит.}
+\end{problem}
+
+%-------------------------------------------------------------
+\begin{problem}{3.4}{ex}{Найти разность теплоёмкостей $\widetilde C_p$ и $\widetilde C_V$ для вещества, уравнение состояния которого
+$V=V(p,T)$ известно.}
+\textbf{Найти:} $\widetilde C_p-\widetilde C_V$ через производные $V(p,T)$.
+
+\textbf{1. Из первого начала} (пример 1.7): $\widetilde C_p-\widetilde C_V=\big[(\partial U/\partial V)_T+p\big](\partial V/\partial T)_p$.
+
+\textbf{2. Внутренняя энергия.} Из $\dd U=T\dd S-p\dd V$ и Максвелла $(\partial S/\partial V)_T=(\partial p/\partial T)_V$:
+\[\Big(\frac{\partial U}{\partial V}\Big)_T+p=T\Big(\frac{\partial p}{\partial T}\Big)_V
+\ \Rightarrow\ \widetilde C_p-\widetilde C_V=T\Big(\frac{\partial p}{\partial T}\Big)_V\Big(\frac{\partial V}{\partial T}\Big)_p.\]
+
+\textbf{3. Через $V(p,T)$.} Тройное произведение: $(\partial p/\partial T)_V=-(\partial V/\partial T)_p\big/(\partial V/\partial p)_T$.
+\answer{$\widetilde C_p-\widetilde C_V=-T\,\dfrac{(\partial V/\partial T)_p^2}{(\partial V/\partial p)_T}$\quad ($>0$, т.к.\ $(\partial V/\partial p)_T<0$).}
+\note{для моля идеального газа получается $C_p-C_V=R$.}
+\end{problem}
+
+%-------------------------------------------------------------
+\begin{problem}{3.5}{ex}{Объём однородного изотропного вещества, уравнение состояния которого $V=V(T,p)$ и теплоёмкость $C_p$ известны,
+изменяется в ходе адиабатического квазистатического процесса. Вывести дифференциальное уравнение, связывающее давление и температуру
+вещества. Решить его в случае одного моля одноатомного идеального газа. Начальные температура и давление равны $T_0$ и $p_0$.}
+\textbf{Найти:} уравнение для $\dd T/\dd p$ при $S=\mathrm{const}$; $T(p)$ для одноатомного газа.
+
+\textbf{1. Адиабата квазистатическая $\Rightarrow$ $S=\mathrm{const}$:}
+$\dd S=\big(\frac{\partial S}{\partial T}\big)_p\dd T+\big(\frac{\partial S}{\partial p}\big)_T\dd p=0$.
+
+\textbf{2. Подставляем} $(\partial S/\partial T)_p=\widetilde C_p/T$ и $(\partial S/\partial p)_T=-(\partial V/\partial T)_p$ (Максвелл):
+\[\frac{\widetilde C_p}{T}\,\frac{\dd T}{\dd p}=\Big(\frac{\partial V}{\partial T}\Big)_p.\]
+
+\textbf{3. Одноатомный газ:} $C_p=\frac52R$, $V=RT/p$, $(\partial V/\partial T)_p=R/p$:
+\[\frac52\,\frac{\dd T}{T}=\frac{\dd p}{p}\ \Rightarrow\ \frac52\ln\frac T{T_0}=\ln\frac p{p_0}\ \Rightarrow\ T=T_0\Big(\frac p{p_0}\Big)^{2/5}.\]
+\answer{$\dfrac{\widetilde C_p}{T}\dfrac{\dd T}{\dd p}=\Big(\dfrac{\partial V}{\partial T}\Big)_p$;\quad
+$\Delta T=T_0\big[(p/p_0)^{2/5}-1\big]$.}
+\end{problem}
+
+%-------------------------------------------------------------
+\begin{problem}{3.6}{ex}{Воду, находящуюся при температуре $T_0=273$\,К и давлении $p_0=100$\,атм, квазистатически адиабатически расширяют
+до атмосферного давления $\tilde p$. Найти изменение температуры воды, если термический коэффициент её объёмного расширения
+$\alpha=-6{,}4\cdot10^{-5}$\,К$^{-1}$, плотность $\rho=10^3$\,кг/м$^3$ остаётся постоянной, а удельная теплоёмкость $c_p=4{,}2$\,кДж/(кг$\cdot$К).}
+\textbf{Найти:} $T-T_0$.
+
+\textbf{1. Уравнение адиабаты из 3.5} на 1 кг: $\frac{c_p}{T}\dd T=\big(\frac{\partial v}{\partial T}\big)_p\dd p$, где удельный объём
+$v=1/\rho$ и $(\partial v/\partial T)_p=\alpha v=\alpha/\rho$:
+\[\frac{\dd T}{T}=\frac{\alpha}{\rho c_p}\dd p\ \Rightarrow\ T=T_0\exp\frac{\alpha(\tilde p-p_0)}{\rho c_p}\approx T_0\Big(1+\frac{\alpha(\tilde p-p_0)}{\rho c_p}\Big).\]
+
+\textbf{2. Числа:} $\tilde p-p_0=-99$\,атм $=-1{,}0\cdot10^7$\,Па;
+\[\frac{\alpha(\tilde p-p_0)}{\rho c_p}=\frac{(-6{,}4\cdot10^{-5})(-1{,}0\cdot10^7)}{10^3\cdot4{,}2\cdot10^3}\approx1{,}5\cdot10^{-4},\quad
+T-T_0\approx273\cdot1{,}5\cdot10^{-4}.\]
+\answer{$T-T_0\approx+0{,}04$\,К — вода при расширении нагревается (т.к.\ $\alpha<0$ при 0–4\,$^\circ$C).}
+\end{problem}
+
+%-------------------------------------------------------------
+\begin{problem}{3.7}{ex}{Процесс Джоуля–Томсона: газ из части 1 цилиндра медленно продавливается через пористую перегородку в часть 2;
+поршни поддерживают постоянные давления $p_1$ и $p_2$ ($p_1>p_2$), цилиндр теплоизолирован. Начальная температура $T_0$.
+Определить конечную температуру $T_1$.}
+\textbf{Найти:} $T_1$ через уравнение состояния и $\widetilde C_p$.
+
+\textbf{1. Что сохраняется.} Слева над газом совершают работу $p_1V_1$, справа газ совершает $p_2V_2$, теплообмена нет:
+$U_2-U_1=p_1V_1-p_2V_2$ $\Rightarrow$ $U_1+p_1V_1=U_2+p_2V_2$, т.е.\ $H=\mathrm{const}$.
+
+\textbf{2. $\dd H=0$ в переменных $T,p$:} $\dd H=\big(\frac{\partial H}{\partial T}\big)_p\dd T+\big(\frac{\partial H}{\partial p}\big)_T\dd p=0$, где
+\[\Big(\frac{\partial H}{\partial T}\Big)_p=T\Big(\frac{\partial S}{\partial T}\Big)_p=\widetilde C_p,\qquad
+\Big(\frac{\partial H}{\partial p}\Big)_T=T\Big(\frac{\partial S}{\partial p}\Big)_T+V=V-T\Big(\frac{\partial V}{\partial T}\Big)_p.\]
+
+\textbf{3. Отсюда коэффициент Джоуля–Томсона и интеграл:}
+\[\Big(\frac{\partial T}{\partial p}\Big)_H=\frac{T(\partial V/\partial T)_p-V}{\widetilde C_p},\qquad
+T_1=T_0+\int_{p_1}^{p_2}\frac{T(\partial V/\partial T)_p-V}{\widetilde C_p}\,\dd p.\]
+\answer{$T_1=T_0+\displaystyle\int_{p_1}^{p_2}\frac{1}{\widetilde C_p}\Big[T\Big(\frac{\partial V}{\partial T}\Big)_p-V\Big]\dd p$.}
+\note{для идеального газа $T(\partial V/\partial T)_p=V$ $\Rightarrow$ $T_1=T_0$ (задача 3.22).}
+\end{problem}
+
+%-------------------------------------------------------------
+\begin{problem}{3.8}{exdz}{Доказать соотношение $(\partial T/\partial V)_S=-T(\partial p/\partial T)_V/\widetilde C_V$.}
+\textbf{1. Тройное произведение} для $T,V,S$ (уходим от $S=\mathrm{const}$):
+\[\Big(\frac{\partial T}{\partial V}\Big)_S=-\frac{(\partial S/\partial V)_T}{(\partial S/\partial T)_V}.\]
+
+\textbf{2. Знаменатель:} $(\partial S/\partial T)_V=\widetilde C_V/T$.
+\textbf{Числитель} по Максвеллу: $(\partial S/\partial V)_T=(\partial p/\partial T)_V$.
+
+\textbf{3. Подставляем:} $\Big(\dfrac{\partial T}{\partial V}\Big)_S=-\dfrac{(\partial p/\partial T)_V}{\widetilde C_V/T}=-\dfrac{T(\partial p/\partial T)_V}{\widetilde C_V}$.
+\answer{доказано.}
+\end{problem}
+
+%-------------------------------------------------------------
+\begin{problem}{3.9}{ex}{Термодинамическая система находится в термостате при постоянном давлении. Найти условия существования устойчивого
+равновесия такой системы.}
+\textbf{Найти:} неравенства на производные, обеспечивающие устойчивость.
+
+\textbf{1. Какой потенциал минимален.} $T,p$ заданы $\Rightarrow$ в равновесии $G=U(S,V)-TS+pV\to\min$ по $S$ и $V$.
+
+\textbf{2. Первая вариация $=0$:}
+$\delta G=\big[(\partial U/\partial V)_S+p\big]\delta V+\big[(\partial U/\partial S)_V-T\big]\delta S=0$
+$\Rightarrow$ температура и давление системы равны внешним.
+
+\textbf{3. Вторая вариация $>0$} (положительная квадратичная форма вторых производных $U$):
+\[\delta^2G=\tfrac12U_{VV}\delta V^2+U_{VS}\delta V\delta S+\tfrac12U_{SS}\delta S^2>0\]
+\[\iff\quad U_{SS}>0,\qquad U_{VV}U_{SS}-U_{VS}^2>0.\]
+
+\textbf{4. Смысл.} $U_{SS}=(\partial T/\partial S)_V=T/\widetilde C_V>0$ $\Rightarrow$ $\widetilde C_V>0$.
+Второе условие (переход к переменным $T,V$) сводится к $-T(\partial p/\partial V)_T/\widetilde C_V>0$.
+\answer{$\widetilde C_V>0$ (тепловая устойчивость) и $(\partial p/\partial V)_T<0$ (механическая).}
+\end{problem}
+
+%-------------------------------------------------------------
+\begin{problem}{3.10}{ex}{В объёмах $V_1=3$\,м$^3$ и $V_2=2$\,м$^3$ при $T_0=300$\,К находятся по $\nu=0{,}5$ моля кислорода и азота
+соответственно. Оценить максимальную работу, которая может быть произведена за счёт изотермического смешивания этих газов в объёме
+$V_1+V_2$. Газы считать идеальными.}
+\textbf{Найти:} $A_{\max}$.
+
+\textbf{1. Изотермический процесс $\Rightarrow$ $A_{\max}=-\Delta F$.} Газы идеальные, каждый просто расширяется на весь объём
+$V=V_1+V_2$. Из 3.1 при $T=\mathrm{const}$ меняется только слагаемое $-\nu RT\ln V$:
+\[\Delta F=-\nu RT_0\ln\frac V{V_1}-\nu RT_0\ln\frac V{V_2}=-\nu RT_0\ln\frac{(V_1+V_2)^2}{V_1V_2}.\]
+
+\textbf{2. Числа:} $\frac{(V_1+V_2)^2}{V_1V_2}=\frac{25}6$, $\ln\frac{25}6=1{,}43$; $\nu RT_0=0{,}5\cdot8{,}31\cdot300=1247$\,Дж;
+$A_{\max}=1247\cdot1{,}43$.
+\answer{$A_{\max}=\nu RT_0\ln\dfrac{(V_1+V_2)^2}{V_1V_2}\approx1{,}8$\,кДж.}
+\end{problem}
+
+%-------------------------------------------------------------
+\begin{problem}{3.16}{dz}{Доказать соотношения $U=F-T(\partial F/\partial T)_V$ и $H=G-T(\partial G/\partial T)_p$.}
+\textbf{1.} По определению $F=U-TS$ $\Rightarrow$ $U=F+TS$. Из $\dd F=-S\dd T-p\dd V$: $S=-(\partial F/\partial T)_V$.
+Подставляем: $U=F-T(\partial F/\partial T)_V$.
+
+\textbf{2.} По определению $G=H-TS$ $\Rightarrow$ $H=G+TS$. Из $\dd G=-S\dd T+V\dd p$: $S=-(\partial G/\partial T)_p$.
+Подставляем: $H=G-T(\partial G/\partial T)_p$.
+\answer{доказано (уравнения Гиббса–Гельмгольца).}
+\end{problem}
+
+%-------------------------------------------------------------
+\begin{problem}{3.17}{dz}{Доказать соотношение $(\partial T/\partial p)_S=T(\partial V/\partial T)_p/\widetilde C_p$.}
+\textbf{1. Тройное произведение} для $T,p,S$:
+\[\Big(\frac{\partial T}{\partial p}\Big)_S=-\frac{(\partial S/\partial p)_T}{(\partial S/\partial T)_p}.\]
+
+\textbf{2.} $(\partial S/\partial T)_p=\widetilde C_p/T$; по Максвеллу (из $\dd G$) $(\partial S/\partial p)_T=-(\partial V/\partial T)_p$.
+
+\textbf{3. Подставляем:} $\Big(\dfrac{\partial T}{\partial p}\Big)_S=\dfrac{(\partial V/\partial T)_p}{\widetilde C_p/T}=\dfrac{T(\partial V/\partial T)_p}{\widetilde C_p}$.
+\answer{доказано (аналог 3.8 с заменой $V\to p$, $\widetilde C_V\to\widetilde C_p$).}
+\end{problem}
+
+%-------------------------------------------------------------
+\begin{problem}{3.18}{dz}{Доказать соотношения $(\partial U/\partial V)_T=-\widetilde C_V(\partial T/\partial V)_S-p$ и
+$(\partial H/\partial p)_T=-\widetilde C_p(\partial T/\partial p)_S+V$.}
+\textbf{1. Первое.} Из $\dd U=T\dd S-p\dd V$ при $T=\mathrm{const}$ и Максвелла $(\partial S/\partial V)_T=(\partial p/\partial T)_V$:
+\[\Big(\frac{\partial U}{\partial V}\Big)_T=T\Big(\frac{\partial S}{\partial V}\Big)_T-p=T\Big(\frac{\partial p}{\partial T}\Big)_V-p.\]
+По 3.8 $T(\partial p/\partial T)_V=-\widetilde C_V(\partial T/\partial V)_S$ $\Rightarrow$
+$(\partial U/\partial V)_T=-\widetilde C_V(\partial T/\partial V)_S-p$.
+
+\textbf{2. Второе.} Из $\dd H=T\dd S+V\dd p$ при $T=\mathrm{const}$ и Максвелла $(\partial S/\partial p)_T=-(\partial V/\partial T)_p$:
+\[\Big(\frac{\partial H}{\partial p}\Big)_T=T\Big(\frac{\partial S}{\partial p}\Big)_T+V=-T\Big(\frac{\partial V}{\partial T}\Big)_p+V.\]
+По 3.17 $T(\partial V/\partial T)_p=\widetilde C_p(\partial T/\partial p)_S$ $\Rightarrow$
+$(\partial H/\partial p)_T=-\widetilde C_p(\partial T/\partial p)_S+V$.
+\answer{доказано.}
+\end{problem}
+
+%-------------------------------------------------------------
+\begin{problem}{3.20}{dz}{Свободная энергия $F$ одного моля некоторого вещества задаётся выражением $F=-0{,}5RT\ln(AT^3V^2)$,
+где $A$ — некоторая константа. Найти молярную теплоёмкость $C_p$ этого вещества.}
+\textbf{Найти:} $C_p=T(\partial S/\partial T)_p$.
+
+\textbf{1. Энтропия и уравнение состояния из $F(T,V)$.} Запишем $F=-\frac12RT(\ln A+3\ln T+2\ln V)$:
+\[S=-\Big(\frac{\partial F}{\partial T}\Big)_V=\tfrac12R\ln(AT^3V^2)+\tfrac32R,\qquad
+p=-\Big(\frac{\partial F}{\partial V}\Big)_T=\frac{RT}{V}.\]
+
+\textbf{2. Энтропия в переменных $T,p$.} Подставляем $V=RT/p$: $AT^3V^2=AR^2T^5/p^2$,
+\[S=\tfrac52R\ln T-R\ln p+\mathrm{const}.\]
+
+\textbf{3. Теплоёмкость:} $C_p=T\big(\frac{\partial S}{\partial T}\big)_p=T\cdot\frac{5R}{2T}$.
+\answer{$C_p=\frac52R$ (вещество — одноатомный идеальный газ: $pV=RT$, $U=F+TS=\frac32RT$).}
+\end{problem}

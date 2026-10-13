@@ -5,12 +5,11 @@
 #include <algorithm>
 #include <cmath>
 
+#include "settings.h"
 #include "ui/style.h"
 #include "ui/widgets.h"
 
-constexpr double FLASH_DECAY = 0.90;  // за каждый кадр подсветка столбика гаснет в столько раз
 constexpr double FLASH_MIN = 0.03;    // более слабая подсветка не рисуется
-constexpr double HEADROOM = 1.35;     // запас по высоте над максимумом теоретической кривой
 
 // Показатель степени для оси плотности: 0.0012 с/м -> -3 (ось в единицах 10⁻³ с/м).
 static int density_exponent(double peak)
@@ -52,7 +51,7 @@ void HistPlot::configure(const QString& value_label, const std::vector<double>& 
     high_ = xs.back();
     exponent_ = rescale ? density_exponent(peak) : 0;
     double factor = std::pow(10.0, -exponent_);
-    top_ = HEADROOM * peak * factor;
+    top_ = settings::HIST_HEADROOM * peak * factor;
     xs_ = xs;
     pdf_ = pdf;
     for (double& f : pdf_)
@@ -103,7 +102,7 @@ void HistPlot::update_view(const Histogram& hist, std::optional<double> current,
     if (flash_.size() != shown_.size())
         flash_.assign(shown_.size(), 0.0);
     for (double& f : flash_)
-        f *= FLASH_DECAY;
+        f *= settings::FLASH_DECAY;
     if (highlight && current)
         if (auto k = hist.bin_of(*current))
             flash_[*k] = 1.0;
@@ -141,13 +140,13 @@ void HistPlot::draw_data(QPainter& p)
     QPolygonF curve;
     for (size_t k = 0; k < xs_.size(); ++k)
         curve << point(xs_[k], pdf_[k]);
-    p.setPen(make_pen(style::THEORY, 0.18));
+    p.setPen(make_pen(style::THEORY, settings::THEORY_LINE));
     p.setBrush(Qt::NoBrush);
     p.drawPolyline(curve);
 
     // Текущее значение — пунктир поперёк оси значений
     if (current_) {
-        p.setPen(make_pen(style::HILITE, 0.12, Qt::DashLine));
+        p.setPen(make_pen(style::HILITE, settings::CURRENT_LINE, Qt::DashLine));
         p.drawLine(point(*current_, 0), point(*current_, top_));
     }
 }

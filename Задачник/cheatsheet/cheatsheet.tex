@@ -1,0 +1,253 @@
+\documentclass[10pt]{article}
+\usepackage[a4paper,margin=14mm]{geometry}
+\input{../solutions/preamble}
+\usepackage{multicol}
+\setlength{\columnsep}{7mm}
+
+\newtcolorbox{method}[1]{enhanced,breakable,colback=blue!3,colframe=excol!70,
+  boxrule=0.5pt,arc=1pt,left=4pt,right=4pt,top=2pt,bottom=2pt,
+  fonttitle=\bfseries\small,title={#1}}
+\newcommand{\see}[1]{\textcolor{excol}{[#1]}}
+
+\title{Конспект к КР: §1, §2, §3, §8, §9}
+\date{}
+
+\begin{document}
+\maketitle
+\vspace{-12mm}
+{\small В квадратных скобках \see{1.5} — номер задачи в файле решений, где приём показан.}
+
+\begin{multicols}{2}
+%==============================================================
+\section*{1. Первое начало}
+
+\textbf{Идеальный газ.}
+$pV=\nu RT=NkT$, $p=nkT$; $R=8{,}31$, $k=1{,}38\cdot10^{-23}$, $N_A=6{,}02\cdot10^{23}$.
+\\$U=\nu C_VT$, $C_V=\frac i2R$ ($i=3$ одноат., 5 двухат., 6 многоат.).
+\\$C_p=C_V+R$, $\gamma=\frac{C_p}{C_V}$: $\frac53$, $\frac75$, $\frac43$. \;$C_V=\frac{R}{\gamma-1}$.
+
+\textbf{Первое начало:} $\delta Q=\dd U+\delta A$, $\delta A=p\,\dd V$. \;
+$Q>0$ — газ получил, $A>0$ — газ совершил.
+
+\textbf{Теплоёмкость в процессе} (моль):
+\[\boxed{C=C_V+p\frac{\dd V}{\dd T}}\]
+Алгоритм: из уравнения процесса и $pV=RT$ выразить $V(T)$, продифференцировать \see{1.4, 1.6, 1.28}.
+
+\begin{tabular}{@{}l@{\;}l@{\;}l@{\;}l@{}}
+процесс & $A$ & $Q$ & $C$\\\hline
+$V$=const & $0$ & $\nu C_V\Delta T$ & $C_V$\\
+$p$=const & $p\Delta V$ & $\nu C_p\Delta T$ & $C_p$\\
+$T$=const & $\nu RT\ln\frac{V_2}{V_1}$ & $=A$ & $\infty$\\
+адиабата & $-\Delta U$ & $0$ & $0$\\
+$p=\alpha V$ & $\frac{\alpha}2(V_2^2-V_1^2)$ & & $C_V+\frac R2$
+\end{tabular}
+
+\textbf{Адиабата:} $pV^\gamma$, $TV^{\gamma-1}$, $T^\gamma p^{1-\gamma}$ = const;
+$A=\frac{p_1V_1-p_2V_2}{\gamma-1}=\nu C_V(T_1-T_2)$.
+
+\textbf{Политропа} ($C$=const) \see{1.5}:
+$pV^n=\text{const}$, $TV^{n-1}=\text{const}$,
+\[n=\frac{C-C_p}{C-C_V},\qquad C=C_V\frac{n-\gamma}{n-1}.\]
+$n=0$ изобара, $1$ изотерма, $\gamma$ адиабата, $\infty$ изохора; $1<n<\gamma\Rightarrow C<0$.
+Работа: $A=\frac{p_1V_1-p_2V_2}{n-1}$. Тепло $Q=\nu C\Delta T$.
+\\\emph{Узнать тип участка по двум точкам}: $p_1V_1^n=p_2V_2^n\Rightarrow n$ \see{1.36}.
+
+\textbf{Уравнение процесса по $C(T)$} \see{1.25}: $C=C_V+\frac{RT}{V}\frac{\dd V}{\dd T}$ — разделить переменные:
+$R\ln V=\int\frac{C-C_V}{T}\dd T$.
+
+\textbf{Экстремум $T$ или $p$ в процессе} \see{1.1}: $T=\frac{p(V)V}{\nu R}$, $\frac{\dd T}{\dd V}=0$.
+
+\textbf{Неоднородный газ} \see{1.3}: слой $\dd x$: $\dd m=\frac{\mu pS\,\dd x}{RT(x)}$, интегрировать.
+
+\textbf{Общие тождества:}
+$C_p-C_V=\big[(\frac{\partial U}{\partial V})_T+p\big](\frac{\partial V}{\partial T})_p$ \see{1.7};
+$(\frac{\partial U}{\partial V})_T=T(\frac{\partial p}{\partial T})_V-p$.
+
+\begin{method}{Циклы: КПД}
+\begin{enumerate}
+\item Найти $T$ во всех вершинах (в ед.\ $pV/R$) \see{1.36}.
+\item По каждому участку $Q_i$ (таблица выше).
+\item $A=\sum Q_i$ (за цикл $\Delta U=0$).
+\item $\eta=\dfrac{A}{Q_+}$, $Q_+$ — сумма \emph{только положительных} $Q_i$.
+\end{enumerate}
+Холодильник: $\eta_x=\frac{|Q_2|}{A}$ \see{1.10}.
+Карно: $\eta=1-\frac{T_2}{T_1}$; на изотермах $\frac{V_2}{V_1}=\frac{V_3}{V_4}$ \see{1.9, 1.35}.
+Отто (2 адиабаты + 2 изохоры): $\eta=1-\frac{T_2}{T_1}=1-(V_1/V_2)^{\gamma-1}$ \see{1.37}.
+Изобара–изохора–адиабата: $\eta=1-\frac{T_2-T_3}{\gamma(T_2-T_1)}$ \see{1.8}.
+Изотермы+политропы $C_0$: отношения объёмов на изотермах равны, $\eta=\frac{R\Delta T\ln k}{C_0\Delta T+RT_1\ln k}$ \see{1.33}.
+\end{method}
+
+Повысить КПД Карно выгоднее понижением $T_2$ \see{1.34}.
+
+%==============================================================
+\section*{2. Второе начало. Энтропия}
+
+$\dd S=\frac{\delta Q}{T}$ (обратимо);\; $\oint\frac{\delta Q}{T}\le0$ (Клаузиус);
+изолированная система: $\Delta S\ge0$.
+
+\textbf{Энтропия ид.\ газа:}
+\[\Delta S=\nu\Big[C_V\ln\frac{T_2}{T_1}+R\ln\frac{V_2}{V_1}\Big]
+=\nu\Big[C_p\ln\frac{T_2}{T_1}-R\ln\frac{p_2}{p_1}\Big]\]
+Изотерма $\nu R\ln\frac{V_2}{V_1}$, изохора $\nu C_V\ln\frac{T_2}{T_1}$, изобара $\nu C_p\ln\frac{T_2}{T_1}$, адиабата $0$,
+политропа $\nu C\ln\frac{T_2}{T_1}$.
+
+\textbf{Тело:} $\Delta S=C\ln\frac{T_2}{T_1}$; плавление/кипение: $\frac{\lambda m}{T}$ \see{2.2}.
+
+\textbf{Диаграмма $T$--$S$} \see{2.6, 2.16}: площадь под кривой $=Q$, площадь цикла $=A$;
+изотерма — горизонталь, адиабата — вертикаль; Карно — прямоугольник.
+
+\begin{method}{Необратимые процессы (смешение, контакт, удар поршня)}
+\begin{enumerate}
+\item Конечное состояние — из сохранения энергии (сосуд теплоизолирован: $\sum U=\text{const}$)
+и условий равновесия ($p$ равны / $T$ равны).
+\item $\Delta S$ каждой части — по формуле ид.\ газа (энтропия — функция состояния).
+\item Сложить.
+\end{enumerate}
+\end{method}
+
+\textbf{Типовые ответы:}
+\begin{itemize}
+\item контакт двух тел $C$, $T_1$, $T_2$: $T=\frac{T_1+T_2}2$, $\Delta S=C\ln\frac{(T_1+T_2)^2}{4T_1T_2}$ \see{2.9};
+\item разные газы, объём каждого удвоился: $+\nu R\ln2$ на каждый \see{2.10}; одинаковые газы — $0$ (парадокс Гиббса);
+\item расширение в пустоту: $T$ не меняется, $\Delta S=\nu R\ln\frac{V_2}{V_1}$ \see{2.8};
+\item смешение при равных $p$, разных $T$ (одноат.): $\frac52R\ln\frac{(T_1+T_2)^2}{4T_1T_2}+2R\ln2$ \see{2.31};
+\item проницаемая перегородка: проходящий газ получает $R\ln2$ \see{2.26};
+\item поршень с трением, $V_1/V_2=n$: $T_1'/T_2'=n$, $\sum T$ сохраняется \see{2.27};
+\item мгновенное изменение груза ($p\to p'$): $\nu C_V(T-T_0)=-p'(V-V_0)$ \see{2.28}.
+\end{itemize}
+
+\begin{method}{Циклы через энтропию}
+$\oint\dd S=0$: сумма $\Delta S$ по участкам $=0$. Отсюда связь температур \see{2.19} или тепло на изотерме:
+$Q_{\text{изот}}=T\,\Delta S$ \see{2.3, 2.20}.
+\end{method}
+
+Максимальная работа двух тел — обратимо, $\Delta S=0$ \see{2.11}:
+$T=T_{10}^{C_1/(C_1+C_2)}T_{20}^{C_2/(C_1+C_2)}$.
+Стефан–Больцман: $u=\sigma T^4$ из $p=u/3$ \see{2.5}.
+
+%==============================================================
+\section*{3. Термодинамические потенциалы}
+
+$\dd U=T\dd S-p\dd V$;\quad $F=U-TS$: $\dd F=-S\dd T-p\dd V$;
+\\$H=U+pV$: $\dd H=T\dd S+V\dd p$;\quad $G=F+pV$: $\dd G=-S\dd T+V\dd p$.
+
+\textbf{Из $F(T,V)$:} $p=-F'_V$ (ур.\ состояния), $S=-F'_T$, $U=F-TF'_T$ \see{3.16, 3.20}.
+\\\textbf{Из $G(T,p)$:} $V=G'_p$, $S=-G'_T$, $H=G-TG'_T$. \textbf{Из $H(S,p)$:} $T=H'_S$, $V=H'_p$ \see{3.2}.
+\\Идеальный газ \see{3.1}: $F=\nu[C_VT(1-\ln T)-RT\ln V-TS_0]$.
+
+\textbf{Максвелл:}
+$\big(\frac{\partial S}{\partial V}\big)_T=\big(\frac{\partial p}{\partial T}\big)_V$,\;
+$\big(\frac{\partial S}{\partial p}\big)_T=-\big(\frac{\partial V}{\partial T}\big)_p$,
+\\$\big(\frac{\partial T}{\partial V}\big)_S=-\big(\frac{\partial p}{\partial S}\big)_V$,\;
+$\big(\frac{\partial T}{\partial p}\big)_S=\big(\frac{\partial V}{\partial S}\big)_p$.
+
+$\widetilde C_V=T(\frac{\partial S}{\partial T})_V$, $\widetilde C_p=T(\frac{\partial S}{\partial T})_p$;\;
+$(\frac{\partial U}{\partial V})_T=T(\frac{\partial p}{\partial T})_V-p$;\;
+$(\frac{\partial H}{\partial p})_T=V-T(\frac{\partial V}{\partial T})_p$.
+\\$\widetilde C_p-\widetilde C_V=-T(\frac{\partial V}{\partial T})_p^2/(\frac{\partial V}{\partial p})_T$ \see{3.4}.
+
+\begin{method}{Доказать тождество}
+\begin{enumerate}
+\item Производную при $S$=const — через тройное произведение:
+$(\frac{\partial x}{\partial y})_S=-\frac{(\partial S/\partial y)_x}{(\partial S/\partial x)_y}$.
+\item $(\partial S/\partial T)_{V,p}=\widetilde C_{V,p}/T$.
+\item $(\partial S/\partial V)_T$, $(\partial S/\partial p)_T$ — по Максвеллу.
+\end{enumerate}
+Итог: $(\frac{\partial T}{\partial V})_S=-\frac{T(\partial p/\partial T)_V}{\widetilde C_V}$ \see{3.8},
+$(\frac{\partial T}{\partial p})_S=\frac{T(\partial V/\partial T)_p}{\widetilde C_p}$ \see{3.17, 3.18}.
+\end{method}
+
+\textbf{Адиабата в $T,p$:} $\frac{\widetilde C_p}{T}\dd T=(\frac{\partial V}{\partial T})_p\dd p$ \see{3.5, 3.6}.
+\textbf{Джоуль–Томсон:} $H$=const, $(\frac{\partial T}{\partial p})_H=\frac{T(\partial V/\partial T)_p-V}{\widetilde C_p}$ \see{3.7}.
+\\$(\partial^2V/\partial T^2)_p=0\Rightarrow\widetilde C_p$ не зависит от $p$ \see{3.3}.
+\\$T$=const: $A_{\max}=-\Delta F$ (смешение: $\nu RT\ln\frac{(V_1+V_2)^2}{V_1V_2}$) \see{3.10}.
+Устойчивость: $\widetilde C_V>0$, $(\frac{\partial p}{\partial V})_T<0$ \see{3.9}.
+
+%==============================================================
+\section*{8. Распределение Максвелла}
+
+\textbf{Проекция:} $w(v_x)=\sqrt{\frac m{2\pi kT}}e^{-mv_x^2/2kT}$ (гаусс, $\sigma^2=\frac{kT}m$).
+\\\textbf{Вектор:} $w(\vec v)=w(v_x)w(v_y)w(v_z)=\big(\frac m{2\pi kT}\big)^{3/2}e^{-mv^2/2kT}$.
+\\\textbf{Модуль:} $w(v)=4\pi\big(\frac m{2\pi kT}\big)^{3/2}v^2e^{-mv^2/2kT}$.
+
+\begin{tabular}{@{}ll@{}}
+$\vp=\sqrt{2kT/m}$ & наивероятнейшая\\
+$\vav=\sqrt{8kT/\pi m}=\frac2{\sqrt\pi}\vp$ & средняя\\
+$v_{\text{кв}}=\sqrt{3kT/m}$ & среднеквадратичная\\
+$\tilde v\approx1{,}088\,\vp$ & медиана \see{8.19}\\
+$\avg{|v_x|}=\sqrt{2kT/\pi m}=\vav/2$ & \see{8.20}\\
+$\avg{|\vec v_1-\vec v_2|}=\sqrt2\,\vav$ & отн.\ скорость \see{8.6}
+\end{tabular}
+($kT/m=RT/\mu$.)
+
+\textbf{По энергиям} \see{8.2}:
+$w(E)=\frac2{\sqrt\pi}(kT)^{-3/2}\sqrt Ee^{-E/kT}$,
+$E^*=\frac{kT}2$, $\avg E=\frac32kT$, $\sigma_E^2=\frac32(kT)^2$, $\delta=\sqrt{2/3}$, для $N$ частиц $\sqrt{2/3N}$ \see{8.3}.
+\\2D: $w(E)=\frac1{kT}e^{-E/kT}$, $\avg E=kT$ \see{8.5}.
+
+\begin{method}{Замена переменной / новые распределения}
+$w(y)=w(x)\big|\frac{\dd x}{\dd y}\big|$. Наивероятнейшие значения \emph{не} переходят друг в друга ($E^*\ne m\vp^2/2$).
+\\Совместные: перейти в удобные координаты в пространстве скоростей:
+сферические $\dd^3v=v^2\dd v\,\dd\Omega$, цилиндрические $\dd^3v=v_\perp\dd v_\perp\dd\varphi\,\dd v_z$ \see{8.21}.
+\\Условное направление при данном $v$: $\cos\theta$ равномерен на $[-1,1]$ $\Rightarrow w(v_x|v)=\frac1{2v}$ \see{8.23}.
+\end{method}
+
+\textbf{Доля в узком интервале:} $\frac{\Delta N}N\approx w(v)\Delta v$ \see{8.1}.
+\\\textbf{Доля в широком:} интеграл через $\erf$:
+$P(v<v_0)=\erf x-\frac2{\sqrt\pi}xe^{-x^2}$, $x=v_0/\vp$;\;
+$P(E<E_0)=\erf\sqrt y-2\sqrt{y/\pi}e^{-y}$, $y=E_0/kT$ \see{8.4, 8.19}.
+
+\textbf{Гауссовы интегралы} $I_n=\int_0^\infty x^ne^{-ax^2}\dd x$:
+$I_0=\frac12\sqrt{\frac\pi a}$, $I_1=\frac1{2a}$, $I_2=\frac{\sqrt\pi}{4a^{3/2}}$, $I_3=\frac1{2a^2}$,
+$I_4=\frac{3\sqrt\pi}{8a^{5/2}}$, $I_5=\frac1{a^3}$; $I_{n+2}=\frac{n+1}{2a}I_n$.
+\\$\int_0^\infty x^ke^{-x}\dd x=k!$; \;$\Gamma(\tfrac12)=\sqrt\pi$, $\Gamma(\tfrac32)=\frac{\sqrt\pi}2$, $\Gamma(\tfrac52)=\frac{3\sqrt\pi}4$.
+
+\begin{method}{Эффузия (поток через стенку/отверстие)}
+\begin{itemize}
+\item Число ударов о площадку: $\nu=\frac14n\vav$ на ед.\ площади и времени \see{8.7}.
+\item Вылетевшие распределены как $v\,w(v)$ (вес $\propto v\cos\theta$, $w(\theta,\varphi)=\frac1\pi\sin\theta\cos\theta$):
+$\avg v=\frac{3\pi}8\vav$, $\avg E=2kT$ \see{8.8}.
+\item Наполнение сосуда: $V\dot n=\frac14S\vav(n_0-n)$ $\Rightarrow n=n_0(1-e^{-t/\tau})$, $\tau=\frac{4V}{S\vav}$ \see{8.9}.
+\item С поршнем: связать $N$ с $p$ через механику ($\kappa x=pS$), затем то же уравнение потока \see{8.10}.
+\item Давление: импульс $2mv\cos\theta$ на удар $\Rightarrow p=nkT$; фотоны $p=u/3$ \see{8.11}.
+\end{itemize}
+\end{method}
+
+Смесь газов: $\tilde w=\sum\frac{N_i}{N}w_i$ \see{8.12}.
+
+%==============================================================
+\section*{9. Распределение Больцмана}
+
+\[n(\vec r)=n_0e^{-U(\vec r)/kT},\qquad N=\int_Vn\,\dd V\ \text{(нормировка)}.\]
+Если $U=U_1(x)+U_2(y,\ldots)$ — распределения независимы, средние энергии складываются \see{9.15}.
+
+\textbf{Поле тяжести}, $U=mgz$:
+$w(z)=\frac{mg}{kT}e^{-mgz/kT}$, $\avg z=\frac{kT}{mg}$, $\avg{z^2}=2\big(\frac{kT}{mg}\big)^2$;
+$\avg U=kT$, $\delta U=1$ \see{9.1}. Барометрическая: $p=p_0e^{-\mu gz/RT}$.
+\\Доля выше $z_0$: $e^{-mgz_0/kT}$ \see{9.14}.
+
+\textbf{Сосуд высотой $H$} ($x=mgH/kT$) \see{9.2}:
+\[\avg{U}=kT-\frac{mgH}{e^{x}-1},\qquad z_c=\frac{kT}{mg}-\frac{H}{e^x-1}.\]
+$x\ll1$: $z_c\approx\frac H2$; $x\gg1$: $z_c\approx\frac{kT}{mg}$.
+Сосуды друг на друге: верхний $+H$ \see{9.16}.
+Смесь: $z_c=\frac{\sum N_im_i\avg{z_i}}{\sum N_im_i}$ \see{9.5}.
+
+\textbf{Центрифуга} ($U=-\frac{m\omega^2r^2}2$):
+$n(r)=n(0)e^{m\omega^2r^2/2kT}$; разделение $q=e^{(m_1-m_2)\omega^2R^2/2kT}$ \see{9.4};
+$\avg{U_{\text{ц}}}=kT-\frac{m\omega^2R^2}{2(1-e^{-b})}$, $b=\frac{m\omega^2R^2}{2kT}$ \see{9.15}.
+
+\textbf{Электрическое поле:} $U=(mg\mp|q|E)z$ — учесть знак заряда и направление $\vec E$ \see{9.12}.
+
+\textbf{Гармоническое поле $U=\alpha r^2$}: $n=N\big(\frac\alpha{\pi kT}\big)^{3/2}e^{-\alpha r^2/kT}$,
+$r_0=\sqrt{kT/\alpha}$, $w(U)$ как у $w(E)$ Максвелла, $\tilde U=\frac{kT}2$ \see{9.13}.
+
+\begin{method}{Найти $n_0$ (концентрацию у дна/вершины)}
+$N=n_0\int S(z)e^{-mgz/kT}\dd z$, $S(z)$ — площадь сечения.
+Цилиндр: $n_0=\frac{Nmg}{SkT}$; конус (угол $2\beta$): $S=\pi z^2\tan^2\beta$, $n_0=\frac{N(mg)^3}{2\pi\tan^2\beta(kT)^3}$ \see{9.8}.
+\end{method}
+
+\textbf{Оценки:} $\frac{\Delta n}{n}=\frac{mg}{kT}\Delta z$ \see{9.3}.
+
+\textbf{Числа:} $kT(300\text{ К})=4{,}14\cdot10^{-21}$ Дж; $\vav(\mathrm{N_2},300)\approx475$ м/с; 1 а.е.м. $=1{,}66\cdot10^{-27}$ кг.
+\end{multicols}
+\end{document}

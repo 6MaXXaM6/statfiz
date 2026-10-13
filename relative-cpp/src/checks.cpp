@@ -173,6 +173,14 @@ static int check_theory(QApplication& app, MainWindow& win, const QString& scree
     int bad = 0;
     for (int k = 0; k < page->section_count(); ++k) {
         page->show_section(k);
+        if (k == 0)
+            page->drawer->open();  // список разделов тоже должен помещаться
+        else
+            page->drawer->close();
+        QElapsedTimer wait;  // дождаться, пока панель доедет (анимация ~0.2 с)
+        wait.start();
+        while (wait.elapsed() < 300)
+            app.processEvents();
         for (int extreme : {0, 1}) {
             for (ParamControl* c : page->stack->widget(k)->findChildren<ParamControl*>())
                 c->spin->setValue(extreme ? c->spin->maximum() : c->spin->minimum());
@@ -265,6 +273,13 @@ int screenshot(QApplication& app, const QStringList& args)
     for (const QString& opt : args.mid(4))
         if (opt.startsWith("section="))
             win.theory->show_section(opt.section('=', 1).toInt() - 1);
+    if (args.mid(4).contains("drawer")) {
+        win.theory->drawer->open();
+        QElapsedTimer wait;  // дать панели доехать
+        wait.start();
+        while (wait.elapsed() < 400)
+            app.processEvents();
+    }
     if (page == "authors") win.show_authors();
 
     const std::map<QString, Quantity> names = {

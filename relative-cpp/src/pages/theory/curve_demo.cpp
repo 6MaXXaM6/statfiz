@@ -6,8 +6,8 @@
 #include <cmath>
 
 #include "model/experiment.h"
-#include "ui/labels.h"
 #include "settings.h"
+#include "ui/labels.h"
 #include "ui/style.h"
 
 using theory::Kind;
@@ -15,7 +15,6 @@ using theory::Kind;
 constexpr int START_T = settings::START_TEMPERATURE;  // начальные параметры (серая кривая)
 constexpr int START_M = settings::START_MASS_A;
 constexpr int CURVE_POINTS = 300;
-constexpr double AXIS_ROOM = 1.6;   // ось x с запасом: кривая может расшириться, не выходя за край
 
 // Кривая f(x) для x от low до high
 static CurvePlot::Curve curve(Kind kind, double s, double low, double high, const QColor& color,
@@ -100,7 +99,7 @@ double CurveDemo::scale_range() const
 
 void CurveDemo::fit_axis()
 {
-    x_high_ = scale_range() * AXIS_ROOM;
+    x_high_ = scale_range() * settings::THEORY_AXIS_ROOM;
     update_view();
 }
 

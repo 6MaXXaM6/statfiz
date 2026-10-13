@@ -1,0 +1,51 @@
+% Общая преамбула для решений и шпаргалки
+\usepackage[T2A]{fontenc}
+\usepackage[utf8]{inputenc}
+\usepackage[russian]{babel}
+\usepackage{amsmath,amssymb}
+\usepackage{xcolor}
+\usepackage[most]{tcolorbox}
+\usepackage{enumitem}
+\usepackage{needspace}
+
+\setlist{nosep,leftmargin=*}
+\setlength{\parindent}{0pt}
+\setlength{\parskip}{3pt}
+
+% --- обозначения ---
+\newcommand{\dd}{\mathrm{d}}
+\newcommand{\avg}[1]{\overline{#1}}
+\newcommand{\vp}{v_{\text{в}}}            % наивероятнейшая скорость
+\newcommand{\vav}{\bar v}                  % средняя скорость
+\newcommand{\erf}{\operatorname{erf}}
+
+% --- задача ---
+% \begin{problem}{1.3}{dz}{условие} ... \end{problem}
+% второй аргумент: dz — задача из ДЗ, ex — разобранный пример книги,
+% exdz — пример, который одновременно входит в ДЗ
+\definecolor{dzcol}{RGB}{180,40,40}
+\definecolor{excol}{RGB}{40,90,170}
+\makeatletter
+\newcommand{\tag@dz}{\textcolor{dzcol}{ДЗ}}
+\newcommand{\tag@ex}{\textcolor{excol}{пример}}
+\newcommand{\tag@exdz}{\textcolor{excol}{пример}\,+\,\textcolor{dzcol}{ДЗ}}
+\newcommand{\probtag}[1]{\csname tag@#1\endcsname}
+\makeatother
+\newtcolorbox{problem}[3]{enhanced,breakable,
+  colback=white,colframe=black!55,boxrule=0.5pt,arc=1pt,
+  left=4pt,right=4pt,top=3pt,bottom=3pt,before skip=6pt,after skip=6pt,
+  fonttitle=\bfseries,coltitle=black,colbacktitle=black!8,
+  title={Задача #1\hfill{\normalfont\small\bfseries\probtag{#2}}},
+  before upper={\textit{#3}\par\smallskip}}
+
+% блок опорных формул в начале параграфа
+\newtcolorbox{basics}{enhanced,breakable,colback=blue!3,colframe=excol!70,
+  boxrule=0.5pt,arc=1pt,left=4pt,right=4pt,top=3pt,bottom=3pt,
+  fonttitle=\bfseries,title={Опорные формулы}}
+\newcommand{\sub}[1]{\par\smallskip\textbf{#1}\par}
+
+\newcommand{\idea}[1]{\textbf{Идея:} #1\par}
+\newtcolorbox{answerbox}{colback=yellow!12,colframe=black!40,boxrule=0.4pt,arc=1pt,
+  left=3pt,right=3pt,top=1pt,bottom=1pt,before skip=4pt,after skip=2pt}
+\newcommand{\answer}[1]{\begin{answerbox}\textbf{Ответ:} #1\end{answerbox}}
+\newcommand{\note}[1]{\par{\small\textcolor{black!60}{\textit{Замечание:} #1}}\par}

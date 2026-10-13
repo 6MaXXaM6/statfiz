@@ -125,7 +125,7 @@ QString html_color(const QString& text, const char* color, bool bold)
 QWidget* header_bar(const QString& title, std::function<void()> back, const std::vector<Action>& extra)
 {
     auto* bar = new QWidget;
-    QLabel* caption = label(title, 1.25, true);
+    QLabel* caption = label(title, settings::HEADER_FONT, true);
     center(caption);
     make_shrinkable(caption);
     int m = style::px(0.3);

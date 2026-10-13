@@ -4,8 +4,8 @@
 
 #include <algorithm>
 
-#include "ui/labels.h"
 #include "settings.h"
+#include "ui/labels.h"
 #include "ui/style.h"
 #include "ui/widgets.h"
 
@@ -28,12 +28,12 @@ static int index_of(Quantity q)
 GraphPanel::GraphPanel(Quantity quantity, bool closable)
 {
     selector_ = new QComboBox;
-    selector_->setFont(style::font(1.1, true));
+    selector_->setFont(style::font(settings::SELECTOR_FONT, true));
     for (Quantity q : QUANTITIES)
         selector_->addItem(labels::quantity_plain(q.obj, q.kind));
     selector_->setCurrentIndex(index_of(quantity));
     connect(selector_, QOverload<int>::of(&QComboBox::currentIndexChanged), this, &GraphPanel::quantity_changed);
-    value_ = label("", 1.2);
+    value_ = label("", settings::VALUE_FONT);
     value_->setSizePolicy(QSizePolicy::Ignored, QSizePolicy::Fixed);
     auto* header = hbox({selector_, {value_, 1}}, style::px(0.4));
     if (closable)
@@ -42,7 +42,7 @@ GraphPanel::GraphPanel(Quantity quantity, bool closable)
     time_plot = new TimePlot;
     hist_plot = new HistPlot(true);
     connect(hist_plot, &HistPlot::rotate_clicked, this, &GraphPanel::rotate);
-    stats_ = label("", 0.85);
+    stats_ = label("", settings::STATS_FONT);
     stats_->setWordWrap(true);
 
     // Графики и подписи (среднее, дисперсия): подписи под графиками или, когда графики
@@ -75,14 +75,14 @@ void GraphPanel::set_side_stats(bool side)
         stats_->setMinimumHeight(0);
         stats_->setMaximumHeight(QWIDGETSIZE_MAX);
         stats_->setAlignment(Qt::AlignLeft | Qt::AlignVCenter);
-        stats_->setFont(style::font(1.0));
+        stats_->setFont(style::font(settings::SIDE_STATS_FONT));
     } else {
         body_->setDirection(QBoxLayout::TopToBottom);
         // Под графиками подпись может сжиматься (Ignored) — окно не станет шире экрана.
         stats_->setSizePolicy(QSizePolicy::Ignored, QSizePolicy::Preferred);
         stats_->setMinimumWidth(0);
         stats_->setMaximumWidth(QWIDGETSIZE_MAX);
-        stats_->setFont(style::font(0.85));
+        stats_->setFont(style::font(settings::STATS_FONT));
         // Высота постоянная: иначе от цифр (минус, степени) она меняется на пиксель,
         // и графики над ними дрожат.
         stats_->setFixedHeight(2 * stats_->fontMetrics().lineSpacing() + style::px(0.4));

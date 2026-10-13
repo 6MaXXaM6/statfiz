@@ -5,10 +5,11 @@
 #include <algorithm>
 #include <cmath>
 
+#include "settings.h"
 #include "ui/style.h"
 
-static const char* RANGE = "#d5dbe6";   // полоса min…max — светлая
-static const char* SPREAD = "#9aa7bf";  // полоса среднее ± σ — потемнее
+static const char* RANGE = settings::COLOR_RANGE;    // полоса min…max — светлая
+static const char* SPREAD = settings::COLOR_SPREAD;  // полоса среднее ± σ — потемнее
 
 TimePlot::TimePlot(QWidget* parent) : PlotBase(parent)
 {
@@ -52,7 +53,7 @@ void TimePlot::draw_data(QPainter& p)
 
     // Текущее значение: пунктир через весь график и точка на конце кривой
     auto [t, v] = *series_->last();
-    p.setPen(make_pen(style::HILITE, 0.12, Qt::DashLine));
+    p.setPen(make_pen(style::HILITE, settings::CURRENT_LINE, Qt::DashLine));
     p.drawLine(QPointF(r.left(), map_y(v)), QPointF(r.right(), map_y(v)));
     p.setPen(QPen(Qt::black, 1.5));
     p.setBrush(QColor(style::HILITE));
@@ -66,7 +67,7 @@ void TimePlot::draw_line(QPainter& p)
     QPolygonF line;
     for (const TimeSeries::Bucket& b : series_->buckets())
         line << map(b.t0, b.last);
-    p.setPen(make_pen(style::REL, 0.08));
+    p.setPen(make_pen(style::REL, settings::CURVE_LINE));
     p.drawPolyline(line);
 }
 

@@ -5,6 +5,7 @@
 #include <cmath>
 
 #include "model/theory.h"
+#include "settings.h"
 #include "ui/labels.h"
 #include "ui/style.h"
 #include "ui/widgets.h"
@@ -12,7 +13,6 @@
 using theory::Kind;
 
 constexpr int BINS = 30;
-constexpr int AUTO_PER_TICK = 20;  // сколько отсчётов добавляет "Набирать" за 50 мс
 
 SamplingDemo::SamplingDemo()
     : sigma_(theory::sigma_for(28, 300)),
@@ -38,7 +38,7 @@ SamplingDemo::SamplingDemo()
         else
             timer_.stop();
     });
-    connect(&timer_, &QTimer::timeout, this, [this] { add_samples(AUTO_PER_TICK); });
+    connect(&timer_, &QTimer::timeout, this, [this] { add_samples(settings::SAMPLES_PER_TICK); });
 
     auto* buttons = hbox({button("+10", [this] { add_samples(10); }),
                           button("+100", [this] { add_samples(100); }),

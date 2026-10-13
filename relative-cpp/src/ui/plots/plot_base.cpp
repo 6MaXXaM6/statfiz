@@ -7,6 +7,7 @@
 #include <algorithm>
 #include <cmath>
 
+#include "settings.h"
 #include "ui/style.h"
 
 QPen make_pen(const QColor& color, double width, Qt::PenStyle line)
@@ -138,7 +139,7 @@ void PlotBase::draw_axes(QPainter& p)
     QRectF r = data_rect();
     int tick = style::px(0.4);
     p.setPen(QPen(Qt::black, 2));
-    p.setFont(style::font(0.8));
+    p.setFont(style::font(settings::AXIS_NUMBERS_FONT));
     QFontMetrics fm(p.font());
 
     // Нижняя ось: деления и числа под ними
@@ -157,7 +158,7 @@ void PlotBase::draw_axes(QPainter& p)
     if (!left_axis_)
         return;
     p.setPen(QPen(Qt::black, 2));
-    p.setFont(style::font(0.8));
+    p.setFont(style::font(settings::AXIS_NUMBERS_FONT));
     p.drawLine(r.topLeft(), r.bottomLeft());
     int max_y = std::max(2, static_cast<int>(r.height() / style::px(2.2)));
     for (double t : ticks(y_low_, y_high_, max_y, step)) {
@@ -176,7 +177,7 @@ void PlotBase::draw_label(QPainter& p, const QString& html, QPointF center, bool
     if (html.isEmpty())
         return;
     QTextDocument doc;
-    doc.setDefaultFont(style::font(0.85));
+    doc.setDefaultFont(style::font(settings::AXIS_LABEL_FONT));
     doc.setDocumentMargin(0);
     doc.setHtml(html);
     QSizeF size = doc.size();

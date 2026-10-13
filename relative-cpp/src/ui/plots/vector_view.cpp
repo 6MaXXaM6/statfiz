@@ -2,13 +2,14 @@
 
 #include "ui/plots/vector_view.h"
 
+#include "settings.h"
 #include "ui/style.h"
 
 constexpr double HEAD = 0.12;  // наконечник стрелки в долях радиуса диаграммы
 
 VectorView::VectorView(QWidget* parent) : CanvasBase(parent)
 {
-    set_sizes(10, 4);
+    set_sizes(settings::VECTOR_SIZE, settings::VECTOR_MIN_SIZE);
 }
 
 void VectorView::set_sizes(double preferred, double minimum)

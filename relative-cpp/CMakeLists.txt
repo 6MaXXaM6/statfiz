@@ -38,6 +38,7 @@ add_executable(relative WIN32
     src/ui/widgets.cpp
     src/ui/labels.cpp
     src/ui/icons.cpp
+    src/ui/drawer.cpp
     src/ui/plots/plot_base.cpp
     src/ui/plots/time_plot.cpp
     src/ui/plots/hist_plot.cpp

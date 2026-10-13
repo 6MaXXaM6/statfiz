@@ -18,7 +18,7 @@ RunControls::RunControls()
     btn_pause = button(QString::fromUtf8("❚❚  Пауза"), [this] { toggle_pause(); });
     btn_stop = button(QString::fromUtf8("■  Стоп"), [this] { stop(); });
     for (QPushButton* b : {btn_start, btn_pause, btn_stop})
-        b->setFont(style::font(1.0, true));
+        b->setFont(style::font(settings::RUN_BUTTON_FONT, true));
     mode = new Choice("", {{"slow", QString::fromUtf8("Медленно")}, {"fast", QString::fromUtf8("Быстро")}});
     speed = new ParamControl(QString::fromUtf8("Скорость"), 1, settings::SLOW_COUNT, settings::START_SPEED, false);
 

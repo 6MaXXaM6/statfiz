@@ -2,12 +2,13 @@
 
 #include "ui/style.h"
 
+#include "settings.h"
+
 #include <QScreen>
 #include <QStyleFactory>
 #include <algorithm>
 #include <cmath>
 
-#include "settings.h"
 
 namespace style {
 
@@ -103,7 +104,7 @@ void init_style(QApplication& app)
         QTextBrowser { border: none; }
     )")
         .arg(PAGE_BG).arg(px(0.4)).arg(px(0.3)).arg(px(0.25)).arg(px(0.5))
-        .arg(px(0.9)).arg(px(1.5)).arg(px(0.6)).arg(px(0.5))
+        .arg(px(0.9)).arg(px(settings::MENU_BUTTON_FONT)).arg(px(0.6)).arg(px(0.5))
         .arg(px(0.4)).arg(px(0.2)).arg(px(1.0)).arg(px(0.35)).arg(px(0.5)));
 }
 

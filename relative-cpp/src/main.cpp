@@ -25,6 +25,12 @@ int main(int argc, char* argv[])
     // под wine переменные Linux в Windows-программу не передаются.
     if (check)
         qputenv("QT_QPA_PLATFORM", "offscreen");
+#ifdef Q_OS_LINUX
+    // В папке с программой — только модуль X11 (xcb); в сеансе Wayland он работает через
+    // XWayland. Выбираем его сразу, чтобы Qt не искал модуль wayland и не писал предупреждений.
+    if (qEnvironmentVariableIsEmpty("QT_QPA_PLATFORM"))
+        qputenv("QT_QPA_PLATFORM", "xcb");
+#endif
 
     // Масштабирование для экранов с увеличенным DPI (до создания приложения).
     QApplication::setAttribute(Qt::AA_EnableHighDpiScaling);

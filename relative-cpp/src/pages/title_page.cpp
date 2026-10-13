@@ -4,6 +4,7 @@
 
 #include <QPainter>
 
+#include "settings.h"
 #include "ui/icons.h"
 #include "ui/style.h"
 #include "ui/widgets.h"
@@ -27,7 +28,7 @@ static QPixmap emblem_placeholder(int size)
 
 static QLabel* emblem(const QString& filename)
 {
-    int size = style::px(7);
+    int size = style::px(settings::EMBLEM_SIZE);
     auto* w = new QLabel;
     w->setAlignment(Qt::AlignCenter);
     QPixmap pix = load_pixmap(filename, size, size);
@@ -38,12 +39,12 @@ static QLabel* emblem(const QString& filename)
 TitlePage::TitlePage(std::function<void()> on_demo, std::function<void()> on_theory,
                      std::function<void()> on_authors, std::function<void()> on_exit)
 {
-    QLabel* title = label(QString::fromUtf8(TITLE), 2.1, true);
+    QLabel* title = label(QString::fromUtf8(TITLE), settings::TITLE_FONT, true);
     center(title);
     set_color(title, style::DARK);
     make_shrinkable(title);
     title->setMinimumHeight(style::px(6));
-    QLabel* subtitle = label(QString::fromUtf8(SUBTITLE), 1.2);
+    QLabel* subtitle = label(QString::fromUtf8(SUBTITLE), settings::SUBTITLE_FONT);
     center(subtitle);
     subtitle->setWordWrap(true);
 

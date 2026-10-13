@@ -13,8 +13,10 @@
 #include <QWidget>
 #include <vector>
 
-constexpr double AXIS_WIDTH = 4.2;   // ширина левой оси (подпись + числа вроде "-1000"), в базовых шрифтах
-constexpr double AXIS_HEIGHT = 2.6;  // высота нижней оси (числа + подпись)
+#include "settings.h"
+
+constexpr double AXIS_WIDTH = settings::AXIS_WIDTH;    // ширина левой оси (подпись + числа вроде "-1000"), в BASE
+constexpr double AXIS_HEIGHT = settings::AXIS_HEIGHT;  // высота нижней оси (числа + подпись)
 
 // Перо для линий; width — в долях базового шрифта (линии толще на больших экранах).
 QPen make_pen(const QColor& color, double width = 0.12, Qt::PenStyle line = Qt::SolidLine);

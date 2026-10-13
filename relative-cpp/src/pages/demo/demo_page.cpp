@@ -5,13 +5,12 @@
 #include <algorithm>
 
 #include "pages/demo/readouts.h"
-#include "ui/icons.h"
 #include "settings.h"
+#include "ui/icons.h"
 #include "ui/style.h"
 
 using theory::Kind;
 
-constexpr double CLICK_DISTANCE = 4.0;   // на каком расстоянии (нм) от молекулы щелчок её выбирает
 constexpr size_t MAX_PANELS = 2;
 // Второй график сначала показывает |v₁| — для сравнения с |v_отн|
 constexpr Quantity SECOND_PANEL = {Obj::Single, Kind::Modulus};
@@ -22,7 +21,7 @@ DemoPage::DemoPage(std::function<void()> go_home, std::function<void()> go_theor
     box_ = new BoxView;
     run = new RunControls;
     vectors_ = new VectorView;
-    legend_ = label("", 1.1);
+    legend_ = label("", settings::LEGEND_FONT);
     center(legend_);
     gas = new GasPanel(exp);
     bins = new ParamControl(QString::fromUtf8("Столбиков"), settings::BINS_MIN, settings::BINS_MAX, exp.bins, true, false);
@@ -45,7 +44,7 @@ DemoPage::DemoPage(std::function<void()> go_home, std::function<void()> go_theor
     zoom_button->setIcon(zoom_icon(side));
     zoom_button->setIconSize(QSize(side * 6 / 10, side * 6 / 10));
     zoom_button->setToolTip(QString::fromUtf8("Графики на весь экран (сосуд и настройки скрываются)"));
-    ratio_ = label("", 1.0);
+    ratio_ = label("", settings::RATIO_FONT);
     make_shrinkable(ratio_);
     // Высота строки сравнения постоянная (две строки), чтобы графики не прыгали, когда она появляется.
     ratio_->setFixedHeight(2 * ratio_->fontMetrics().lineSpacing() + style::px(0.3));
@@ -245,7 +244,7 @@ void DemoPage::on_gas_changed()
 
 void DemoPage::on_box_clicked(double x, double y, int which)
 {
-    int k = exp.gas->nearest(x, y, CLICK_DISTANCE);
+    int k = exp.gas->nearest(x, y, settings::CLICK_DISTANCE);
     if (k >= 0)
         changed([this, k, which] { exp.select(k, which); });
 }

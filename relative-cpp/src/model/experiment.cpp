@@ -2,6 +2,8 @@
 
 #include "model/experiment.h"
 
+#include "settings.h"
+
 #include <algorithm>
 #include <chrono>
 #include <cmath>
