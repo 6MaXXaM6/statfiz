@@ -1,26 +1,26 @@
 <h2>Распределение модуля скорости (2D)</h2>
 <p>Проекции v<sub>x</sub> и v<sub>y</sub> независимы, поэтому плотность для вектора скорости — произведение двух гауссиан:</p>
-<p class="f" align="center">f(v<sub>x</sub>, v<sub>y</sub>) = (m / 2πkT) · exp(−m(v<sub>x</sub><sup>2</sup> + v<sub>y</sub><sup>2</sup>) / 2kT)</p>
+<p class="f" align="center"><math>f(v_x,v_y) = \frac{m}{2\pi kT}\,\exp\!\left(-\frac{m(v_x^2+v_y^2)}{2kT}\right)</math></p>
 <p>Она зависит только от |v|. Скоростям с модулем от v до v + dv на плоскости (v<sub>x</sub>, v<sub>y</sub>) соответствует
 <b>кольцо</b> площадью 2πv&nbsp;dv. Умножаем на площадь кольца и получаем распределение <b>Рэлея</b>
 (двумерный Максвелл):</p>
-<p class="f" align="center">f(v) = (m v / kT) · exp(−m v<sup>2</sup> / 2kT)</p>
+<p class="f" align="center"><math>f(v) = \frac{mv}{kT}\,\exp\!\left(-\frac{mv^2}{2kT}\right)</math></p>
 
 <h3>Характерные скорости</h3>
 <table cellspacing="6">
-<tr><td>наиболее вероятная</td><td>v<sub>вер</sub> = √(kT/m)</td></tr>
-<tr><td>средняя</td><td>⟨v⟩ = √(πkT / 2m) ≈ 1.25 v<sub>вер</sub></td></tr>
-<tr><td>среднеквадратичная</td><td>√⟨v<sup>2</sup>⟩ = √(2kT/m) ≈ 1.41 v<sub>вер</sub></td></tr>
-<tr><td>дисперсия</td><td>D = (2 − π/2) kT/m</td></tr>
+<tr><td>наиболее вероятная</td><td><math>v_{\mathrm{вер}} = \sqrt{\frac{kT}{m}}</math></td></tr>
+<tr><td>средняя</td><td><math>\langle v\rangle = \sqrt{\frac{\pi kT}{2m}} \approx 1.25\,v_{\mathrm{вер}}</math></td></tr>
+<tr><td>среднеквадратичная</td><td><math>\sqrt{\langle v^2\rangle} = \sqrt{\frac{2kT}{m}} \approx 1.41\,v_{\mathrm{вер}}</math></td></tr>
+<tr><td>дисперсия</td><td><math>D = \left(2-\frac{\pi}{2}\right)\frac{kT}{m}</math></td></tr>
 </table>
 
 <p><b>Почему f(0) = 0</b>, хотя каждая проекция чаще всего близка к нулю? Маленьким скоростям соответствует маленькое кольцо:
 таких состояний мало.</p>
 
-<p class="note">В объёме (3D) вместо кольца — сферический слой 4πv<sup>2</sup>dv, поэтому f(v) ∝ v<sup>2</sup> e<sup>−mv²/2kT</sup>,
-а v<sub>вер</sub> = √(2kT/m).</p>
+<p class="note">В объёме (3D) вместо кольца — сферический слой 4πv<sup>2</sup>dv, поэтому <math>f(v) \propto v^2 e^{-\frac{mv^2}{2kT}}</math>,
+а <math>v_{\mathrm{вер}} = \sqrt{\frac{2kT}{m}}</math>.</p>
 
 <p class="try"><b>Попробуйте:</b> меняйте T и m и следите за метками.
-Отношения ⟨v⟩/v<sub>вер</sub> и √⟨v²⟩/v<sub>вер</sub> остаются постоянными — меняется только масштаб.</p>
+Отношения <math>\frac{\langle v\rangle}{v_{\mathrm{вер}}}</math> и <math>\frac{\sqrt{\langle v^2\rangle}}{v_{\mathrm{вер}}}</math> остаются постоянными — меняется только масштаб.</p>
 
 <p class="note"><b>Основание:</b> [1], пример 8.5, с. 95–96, формула (8.8); переход от импульса к скорости p = mv. Полная библиография и различия 2D/3D — в разделе 8.</p>

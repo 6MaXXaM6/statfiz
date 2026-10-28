@@ -5,6 +5,7 @@ import settings
 from ui import style
 from ui.drawer import Drawer
 from ui.widgets import button, card, header_bar, hbox, label, section_title, vbox
+from pages.theory.formula_browser import FormulaBrowser
 from pages.theory.curve_demo import CurveDemo
 from pages.theory.sampling_demo import SamplingDemo
 from pages.theory.collision_sketch import CollisionSketch
@@ -29,14 +30,7 @@ class TheoryPage(QtWidgets.QWidget):
         self.group = QtWidgets.QButtonGroup(self)
         nav = vbox(section_title("Разделы"), spacing=style.px(.3))
         for index, (title, filename, factory) in enumerate(SECTIONS):
-            text = QtWidgets.QTextBrowser()
-            text.setOpenExternalLinks(True)
-            text.document().setDefaultFont(style.font(settings.THEORY_TEXT_FONT))
-            text.document().setDocumentMargin(style.px(.8))
-            text.document().setDefaultStyleSheet(
-                'h2 { color: #1c3f7a; } .f { font-size: %dpx; } '
-                '.note { color: #555555; } .try { color: #1f4fd1; }' % style.px(settings.THEORY_FORMULA_FONT))
-            text.setHtml(Path(style.resource_path("theory", filename)).read_text(encoding="utf-8"))
+            text = FormulaBrowser(Path(style.resource_path("theory", filename)).read_text(encoding="utf-8"))
             section = QtWidgets.QWidget()
             section.demo = factory() if factory else None
             items = [(text, 1)]

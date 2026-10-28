@@ -3,12 +3,20 @@ import numpy as np
 import pyqtgraph as pg
 from PyQt5 import QtWidgets
 import settings
+from pages.theory.formula_browser import FormulaReadout
 from model import theory as tf
 from model.physics import K_B
 from model.experiment import ENERGY_UNIT
 from ui import labels, style
 from ui.plots.base import StaticPlot, pen
-from ui.widgets import ParamControl, button, hbox, label, vbox
+from ui.widgets import ParamControl, button, hbox, vbox
+
+
+SIGMA = r'<math>\sigma = \sqrt{\frac{kT}{m}}</math>'
+VMP = r'<math>v_{\mathrm{вер}} = \sqrt{\frac{kT}{m}}</math>'
+MU = r'<math>\mu = \frac{m_1m_2}{m_1+m_2}</math>'
+RATIO = r'<math>\frac{\langle |\mathbf{v}_{\mathrm{отн}}|\rangle}{\langle |\mathbf{v}_1|\rangle}</math>'
+SCALE = r'<math>\sqrt{\frac{m_1}{\mu}}</math>'
 
 
 class CurveDemo(QtWidgets.QWidget):
@@ -24,7 +32,7 @@ class CurveDemo(QtWidgets.QWidget):
         self.plot = StaticPlot()
         self.plot.setMinimumHeight(style.px(12))
         self.legend = self.plot.addLegend(offset=(-10, 10), labelTextSize=f"{style.px(.8)}px")
-        self.readout = label(size=.95, wrap=True)
+        self.readout = FormulaReadout()
         self.items = []
         self.setLayout(vbox((self.plot, 1), self.readout, self.temperature, self.mass_1, self.mass_2,
             hbox(None, button("Подогнать масштаб", self.fit_axis), button("Сбросить", self.reset),
@@ -61,12 +69,12 @@ class CurveDemo(QtWidgets.QWidget):
         if self.variant == "projection":
             curves += [(s, style.PROJ, False, "f(vₓ)")]
             markers = [(-s, style.PROJ, "−σ"), (s, style.PROJ, "+σ")]
-            text = f"σ = √(kT/m) = <b>{style.fmt(s)}</b> м/с &nbsp; ⟨vₓ⟩ = 0 &nbsp; D = σ² = <b>{style.fmt(s*s/1e3,1)}</b>·10³ (м/с)²"
+            text = f"{SIGMA} = <b>{style.fmt(s)}</b> м/с &nbsp; ⟨vₓ⟩ = 0 &nbsp; D = σ² = <b>{style.fmt(s*s/1e3,1)}</b>·10³ (м/с)²"
         elif self.variant == "modulus":
             mean, rms = tf.mean(tf.MODULUS, s), s*np.sqrt(2)
             curves += [(s, style.REL, False, "f(|v|)")]
             markers = [(s, style.MOL2, "vвер"), (mean, style.THEORY, "⟨v⟩"), (rms, style.PROJ, "√⟨v²⟩")]
-            text = f"v<sub>вер</sub> = √(kT/m) = <b>{style.fmt(s)}</b> &nbsp; ⟨v⟩ = <b>{style.fmt(mean)}</b> &nbsp; √⟨v²⟩ = <b>{style.fmt(rms)}</b> м/с"
+            text = f"{VMP} = <b>{style.fmt(s)}</b> &nbsp; ⟨v⟩ = <b>{style.fmt(mean)}</b> &nbsp; √⟨v²⟩ = <b>{style.fmt(rms)}</b> м/с"
         elif self.variant in ("relative", "mixture"):
             mu = tf.reduced_mass(m1, m2)
             s2, sr = tf.sigma_for(m2, t), tf.sigma_for(mu, t)
@@ -74,8 +82,8 @@ class CurveDemo(QtWidgets.QWidget):
                       (s,style.MOL1,False,"|v₁|"), (s2,style.MOL2,m1 == m2,"|v₂|"), (sr,style.REL,False,"|vотн|")]
             mean1, meanr = tf.mean(tf.MODULUS,s), tf.mean(tf.MODULUS,sr)
             markers = [(mean1,style.MOL1,"⟨|v₁|⟩"), (meanr,style.REL,"⟨|vотн|⟩")]
-            ratio = "√2 ≈ 1.414" if m1 == m2 else f"√(m₁/μ) = {np.sqrt(m1/mu):.3f}"
-            text = f"μ = m₁m₂/(m₁+m₂) = <b>{style.fmt(mu,1)}</b> а.е.м.<br>⟨|v₁|⟩ = {style.fmt(mean1)}, ⟨|v₂|⟩ = {style.fmt(tf.mean(tf.MODULUS,s2))}, ⟨|vотн|⟩ = <b>{style.fmt(meanr)}</b> м/с<br>⟨|vотн|⟩ / ⟨|v₁|⟩ = <b>{ratio}</b>"
+            ratio = "√2 ≈ 1.414" if m1 == m2 else f"{SCALE} = {np.sqrt(m1/mu):.3f}"
+            text = f"{MU} = <b>{style.fmt(mu,1)}</b> а.е.м.<br>⟨|v₁|⟩ = {style.fmt(mean1)}, ⟨|v₂|⟩ = {style.fmt(tf.mean(tf.MODULUS,s2))}, ⟨|vотн|⟩ = <b>{style.fmt(meanr)}</b> м/с<br>{RATIO} = <b>{ratio}</b>"
         else:
             s = K_B*t/ENERGY_UNIT
             curves = [(K_B*300/ENERGY_UNIT,"#9a9a9a",True,"T = 300 К"), (s,style.THEORY,False,"f(E)")]

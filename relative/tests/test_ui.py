@@ -97,7 +97,11 @@ def test_theory_navigation_and_interactive_examples(app):
     sources = page.stack.widget(7).findChild(QtWidgets.QTextBrowser).toPlainText()
     assert "Пример 8.5" in sources and "95–96" in sources
     assert "Пример 8.6" in sources and "96–97" in sources
-    assert "3kT/2" in sources and "374" in sources
+    assert "374" in sources
+    from pages.theory.formula_browser import FormulaBrowser
+    browser = page.stack.widget(7).findChild(FormulaBrowser)
+    assert r"\frac{3kT}{2}" in browser.source
+    assert browser.formulas
     win.close()
 
 

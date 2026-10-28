@@ -2,11 +2,15 @@
 import numpy as np
 from PyQt5 import QtCore, QtWidgets
 import settings
+from pages.theory.formula_browser import FormulaReadout
 from model import theory as tf
 from model.stats import Histogram
 from ui import style
 from ui.plots.hist_plot import HistPlot
-from ui.widgets import button, hbox, label, vbox
+from ui.widgets import button, hbox, vbox
+
+
+ERROR_SCALE = r'<math>\frac{1}{\sqrt{N}}</math>'
 
 
 class SamplingDemo(QtWidgets.QWidget):
@@ -22,7 +26,7 @@ class SamplingDemo(QtWidgets.QWidget):
         xs = np.linspace(low, high, 301)
         self.plot.configure("|v|, м/с", xs, tf.pdf(tf.MODULUS, xs, self.sigma),
                             peak=tf.peak(tf.MODULUS, self.sigma))
-        self.readout = label(size=.95, wrap=True)
+        self.readout = FormulaReadout()
         self.auto_button = button("▶ Набирать", checkable=True)
         self.timer = QtCore.QTimer(self)
         self.timer.setInterval(50)
@@ -51,4 +55,4 @@ class SamplingDemo(QtWidgets.QWidget):
         self.plot.update_view(self.hist)
         distance = np.sum(np.abs(self.hist.density()-tf.pdf(tf.MODULUS,self.hist.centers,self.sigma)))*self.hist.width
         error = style.fmt(distance,3) if self.hist.total else "—"
-        self.readout.setText(f"N = <b>{style.fmt(self.hist.total)}</b> отсчётов &nbsp; ⟨|v|⟩ = <b>{style.fmt(self.hist.mean())}</b> м/с (теор. {style.fmt(tf.mean(tf.MODULUS,self.sigma))})<br>отличие от теории L1 = <b>{error}</b> (≈ 1/√N: чтобы уменьшить вдвое, нужно вчетверо больше отсчётов)")
+        self.readout.setText(f"N = <b>{style.fmt(self.hist.total)}</b> отсчётов &nbsp; ⟨|v|⟩ = <b>{style.fmt(self.hist.mean())}</b> м/с (теор. {style.fmt(tf.mean(tf.MODULUS,self.sigma))})<br>отличие от теории L1 = <b>{error}</b> (≈ {ERROR_SCALE}: чтобы уменьшить вдвое, нужно вчетверо больше отсчётов)")
