@@ -1,5 +1,7 @@
 """Распределение вероятностей: столбики эксперимента и кривая теории."""
 
+import settings
+
 import math
 
 import numpy as np
@@ -10,9 +12,9 @@ from ui import style
 from ui.plots.base import StaticPlot, pen, show_line_at
 from ui.widgets import overlay_button, place_overlay
 
-FLASH_DECAY = 0.90   # за каждый кадр подсветка столбика гаснет в столько раз
+FLASH_DECAY = settings.FLASH_DECAY   # за каждый кадр подсветка столбика гаснет в столько раз
 FLASH_MIN = 0.03     # более слабая подсветка не рисуется
-HEADROOM = 1.35      # запас по высоте над максимумом теоретической кривой
+HEADROOM = settings.HIST_HEADROOM      # запас по высоте над максимумом теоретической кривой
 
 
 def density_exponent(peak):
@@ -38,7 +40,7 @@ class HistPlot(StaticPlot):
 
     def __init__(self, sideways=True):
         super().__init__()
-        self.theory = self.plot(pen=pen(style.THEORY, 0.18))
+        self.theory = self.plot(pen=pen(style.THEORY, settings.THEORY_LINE))
         self.theory.setZValue(5)
         self.other_theory = self.plot(pen=pen("#777777", dashed=True))
         self.other_theory.setZValue(4)

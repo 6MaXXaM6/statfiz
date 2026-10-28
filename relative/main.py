@@ -72,7 +72,12 @@ def smoke_test(app, window, report_path):
         app.quit()
 
     def start():
-        for show in (window.show_theory, window.show_authors, window.show_title, window.show_demo):
+        window.show_theory()
+        for index in range(window.theory.stack.count()):
+            window.theory.show_section(index)
+            app.processEvents()
+        window.theory.show_section(0)
+        for show in (window.show_authors, window.show_title, window.show_demo):
             show()
         window.demo.add_next_panel()
         window.demo.panels[1].show_quantity("single", "energy")

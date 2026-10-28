@@ -1,3 +1,4 @@
 {
-    "cmake.sourceDirectory": "/home/maximkh/statfiz/relative-cpp"
+    "cmake.sourceDirectory": "${workspaceFolder}/relative-cpp",
+    "python.defaultInterpreterPath": "${workspaceFolder}/relative/.venv-macos/bin/python"
 }

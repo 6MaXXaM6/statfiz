@@ -1,5 +1,7 @@
 """Сосуд с молекулами."""
 
+import settings
+
 import pyqtgraph as pg
 from PyQt5 import QtCore, QtGui, QtWidgets
 
@@ -7,8 +9,8 @@ from model.experiment import PAIR
 from ui import style
 from ui.plots.base import Arrow, StaticPlot
 
-ARROW_LENGTH = 12.0  # длина стрелки (нм) для скорости, равной масштабной
-ARROW_HEAD = 3.0     # наконечник стрелки, нм
+ARROW_LENGTH = settings.ARROW_LENGTH  # длина стрелки (нм) для скорости, равной масштабной
+ARROW_HEAD = settings.ARROW_HEAD     # наконечник стрелки, нм
 
 
 class BoxView(StaticPlot):

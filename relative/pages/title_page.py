@@ -1,5 +1,7 @@
 """Титульная страница: название, эмблемы факультетов и четыре кнопки."""
 
+import settings
+
 from PyQt5 import QtCore, QtGui, QtWidgets
 
 from ui import style
@@ -25,7 +27,7 @@ def emblem_placeholder(size):
 
 
 def emblem(filename):
-    size = style.px(7)
+    size = style.px(settings.EMBLEM_SIZE)
     w = QtWidgets.QLabel()
     w.setAlignment(QtCore.Qt.AlignCenter)
     w.setPixmap(load_pixmap(filename, size, size) or emblem_placeholder(size))
@@ -35,9 +37,9 @@ def emblem(filename):
 class TitlePage(QtWidgets.QWidget):
     def __init__(self, on_demo, on_theory, on_authors, on_exit):
         super().__init__()
-        title = label(TITLE, 2.1, bold=True, center=True, color="#1c3f7a", shrinkable=True)
+        title = label(TITLE, settings.TITLE_FONT, bold=True, center=True, color="#1c3f7a", shrinkable=True)
         title.setMinimumHeight(style.px(6))
-        subtitle = label(SUBTITLE, 1.2, center=True, wrap=True)
+        subtitle = label(SUBTITLE, settings.SUBTITLE_FONT, center=True, wrap=True)
         buttons = vbox(spacing=style.px(0.8))
         for text, callback in (("Презентация", on_demo), ("Теория по теме", on_theory),
                                ("Авторы", on_authors), ("Выход", on_exit)):

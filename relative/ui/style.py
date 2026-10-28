@@ -4,6 +4,8 @@
 """
 
 import os
+
+import settings
 import sys
 
 import pyqtgraph as pg
@@ -13,17 +15,17 @@ from PyQt5 import QtGui
 BASE = 20
 
 # Цвета (яркие и контрастные — для проектора)
-MOL1 = "#d7191c"       # молекула 1 и её скорость — красный
-MOL2 = "#1f4fd1"       # молекула 2 и её скорость — синий
-REL = "#000000"        # относительная скорость — чёрный
-GAS_A = "#6b7a90"      # молекулы газа A — серо-синий
-GAS_B = "#1a9641"      # молекулы газа B — зелёный
-THEORY = "#d7191c"     # теоретическая кривая
-HILITE = "#ff8c00"     # подсветка текущего значения — оранжевый
-BAR = "#b8c7e0"        # столбики гистограммы
-BAR_EDGE = "#7f93b5"   # края столбиков — светлее, чтобы узкие столбики не сливались в полосы
-PROJ = "#8e24aa"       # проекция — фиолетовый
-PAGE_BG = "#eef1f6"    # фон страниц (карточки на нём — белые)
+MOL1 = settings.COLOR_MOL1       # молекула 1 и её скорость — красный
+MOL2 = settings.COLOR_MOL2       # молекула 2 и её скорость — синий
+REL = settings.COLOR_REL        # относительная скорость — чёрный
+GAS_A = settings.COLOR_GAS_A      # молекулы газа A — серо-синий
+GAS_B = settings.COLOR_GAS_B      # молекулы газа B — зелёный
+THEORY = settings.COLOR_THEORY     # теоретическая кривая
+HILITE = settings.COLOR_HILITE     # подсветка текущего значения — оранжевый
+BAR = settings.COLOR_BAR        # столбики гистограммы
+BAR_EDGE = settings.COLOR_BAR_EDGE   # края столбиков — светлее, чтобы узкие столбики не сливались в полосы
+PROJ = settings.COLOR_PROJ       # проекция — фиолетовый
+PAGE_BG = settings.COLOR_PAGE    # фон страниц (карточки на нём — белые)
 
 
 def resource_path(*parts):
@@ -75,7 +77,8 @@ def init_style(app):
         width, height = map(int, os.environ["RELATIVE_SCREEN"].split("x"))
     # ~42 строки текста на высоту экрана: 1080 px -> 26 px, 768 px -> 18 px;
     # на узких экранах — не больше 1/64 ширины (1024 px -> 16 px).
-    BASE = min(40, max(12, int(round(min(height / 42, width / 64)))))
+    BASE = min(settings.FONT_MAX, max(settings.FONT_MIN, int(round(
+        min(height / settings.LINES_PER_SCREEN, width / settings.COLUMNS_PER_SCREEN) * settings.FONT_SCALE))))
 
     f = app.font()
     f.setPixelSize(BASE)
@@ -126,7 +129,7 @@ def init_style(app):
         """
         % dict(
             r=px(0.3), p=px(0.25), p2=px(0.5),
-            big=px(1.5), bp=px(0.6), br=px(0.5),
+            big=px(settings.MENU_BUTTON_FONT), bp=px(0.6), br=px(0.5),
             gh=px(0.4), gr=px(0.2), hw=px(1.0), hm=px(0.35), hr=px(0.5),
             cb=px(0.9), rc=px(0.4), tb=px(0.2), ob=px(0.9),
             page=PAGE_BG,

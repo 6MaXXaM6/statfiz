@@ -6,9 +6,13 @@
 #   make test      — тесты физики + проверка компоновки на разных экранах
 #   make clean     — удалить результаты сборки
 
-PYTHON := .venv/bin/python
+ifeq ($(shell uname -s),Darwin)
+PYTHON ?= .venv-macos/bin/python
+else
+PYTHON ?= .venv/bin/python
+endif
 
-.PHONY: all windows linux run test layout clean
+.PHONY: all windows linux macos run test layout clean
 
 all: linux windows
 
@@ -21,9 +25,12 @@ linux:
 run:
 	$(PYTHON) main.py --window
 
+macos:
+	PYINSTALLER_CONFIG_DIR=$(CURDIR)/build/macos/pyinstaller-cache $(PYTHON) -m PyInstaller --noconfirm --distpath dist/macos --workpath build/macos packaging/relative.spec
+
 test:
 	$(PYTHON) -m pytest -q tests
-	$(PYTHON) -m pyflakes main.py model ui pages tools tests
+	$(PYTHON) -m pyflakes main.py settings.py model ui pages tools tests
 
 layout:
 	$(PYTHON) tools/layout_check.py

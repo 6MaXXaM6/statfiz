@@ -5,16 +5,17 @@ import time
 from PyQt5 import QtCore, QtWidgets
 
 from ui import style
-from ui.widgets import Choice, ParamControl, button, hbox, label, vbox
+from ui.widgets import Choice, ParamControl, button, hbox, vbox
+import settings
 
-FRAME_MS = 16  # ~60 кадров в секунду
+FRAME_MS = settings.FRAME_MS  # ~60 кадров в секунду
 # После каждого кадра цикл событий хотя бы столько миллисекунд свободен. На Windows обычные
 # таймеры Qt (например, задержка движков) срабатывают, только когда очередь событий пуста;
 # без паузы при долгом кадре (быстрый режим) они не срабатывали бы никогда.
-MIN_IDLE_MS = 5
+MIN_IDLE_MS = settings.MIN_IDLE_MS
 
 # Медленный режим: сколько шагов dt моделируется за кадр при положениях движка 1..10
-SLOW_FACTORS = [0.05, 0.1, 0.15, 0.25, 0.4, 0.6, 1.0, 1.5, 2.5, 4.0]
+SLOW_FACTORS = settings.SLOW_FACTORS
 
 STOPPED, RUNNING, PAUSED = "stopped", "running", "paused"
 
@@ -31,6 +32,7 @@ class RunControls(QtWidgets.QWidget):
     started = QtCore.pyqtSignal()
     tick = QtCore.pyqtSignal(bool, float)
     mode_changed = QtCore.pyqtSignal(bool)
+    ensemble_changed = QtCore.pyqtSignal(bool)
 
     def __init__(self):
         super().__init__()
@@ -40,20 +42,22 @@ class RunControls(QtWidgets.QWidget):
         self.timer.setSingleShot(True)  # следующий кадр планируется после окончания текущего
         self.timer.timeout.connect(self._on_timer)
 
-        self.btn_start = button("▶  Старт", self.start, size=1.0, bold=True)
-        self.btn_pause = button("❚❚  Пауза", self.toggle_pause, size=1.0, bold=True)
-        self.btn_stop = button("■  Стоп", self.stop, size=1.0, bold=True)
+        self.btn_start = button("▶  Старт", self.start, size=settings.RUN_BUTTON_FONT, bold=True)
+        self.btn_pause = button("❚❚  Пауза", self.toggle_pause, size=settings.RUN_BUTTON_FONT, bold=True)
+        self.btn_stop = button("■  Стоп", self.stop, size=settings.RUN_BUTTON_FONT, bold=True)
         self.mode = Choice(None, [("slow", "Медленно"), ("fast", "Быстро")])
         self.mode.changed.connect(self._on_mode)
-        self.speed = ParamControl("Скорость", 1, len(SLOW_FACTORS), 5, show_number=False)
+        self.speed = ParamControl("Скорость", 1, len(SLOW_FACTORS), settings.START_SPEED, show_number=False)
 
-        # В быстром режиме на месте движка — пояснение, что статистика собирается по всем молекулам.
-        self.fast_note = label("статистика по всем молекулам того же сорта", size=0.75, wrap=True, color="#666666")
+        self.ensemble_box = QtWidgets.QCheckBox("Статистика по всем молекулам")
+        self.ensemble_box.setChecked(settings.START_ENSEMBLE)
+        self.ensemble_box.setFocusPolicy(QtCore.Qt.NoFocus)
+        self.ensemble_box.setToolTip("Гистограммы по всем молекулам того же сорта; иначе — только по выбранной паре.")
+        self.ensemble_box.toggled.connect(self.ensemble_changed)
         self.setLayout(vbox(
             hbox(self.btn_start, self.btn_pause, self.btn_stop),
-            hbox((self.mode, 2), (self.speed, 3), (self.fast_note, 3)),
-            spacing=style.px(0.2),
-        ))
+            hbox((self.mode, 2), (self.speed, 3)), self.ensemble_box,
+            spacing=style.px(0.2)))
         self._update_buttons()
 
     @property
@@ -90,10 +94,12 @@ class RunControls(QtWidgets.QWidget):
         self.btn_pause.setEnabled(self.state != STOPPED)
         self.btn_pause.setText("▶  Продолжить" if self.state == PAUSED else "❚❚  Пауза")
         self.btn_stop.setEnabled(self.state != STOPPED)
-        self.speed.setVisible(not self.fast)
-        self.fast_note.setVisible(self.fast)
+        self.speed.setEnabled(not self.fast)
+        self.ensemble_box.setEnabled(not self.fast)
 
     def _on_mode(self, _key):
+        if self.fast:
+            self.ensemble_box.setChecked(True)
         self._update_buttons()
         self.mode_changed.emit(self.fast)
 

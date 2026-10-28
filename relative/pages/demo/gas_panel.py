@@ -1,16 +1,17 @@
 """Правая колонка: параметры газа. Настройки смеси видны только в режиме "Смесь"."""
 
+import settings
+
 from collections import namedtuple
 
 from PyQt5 import QtCore, QtWidgets
 
 from model.experiment import GAS_MIX, GAS_PURE
-from model.physics import MAX_PARTICLES
 from ui import style
 from ui.widgets import Choice, ParamControl, card, vbox
 
 # Параметры газа, при изменении которых газ создаётся заново
-GasParams = namedtuple("GasParams", "gas_mode mass_a mass_b n_total n_b")
+GasParams = namedtuple("GasParams", "gas_mode mass_a mass_b n_total n_b start collisions")
 
 
 class GasPanel(QtWidgets.QWidget):
@@ -21,13 +22,22 @@ class GasPanel(QtWidgets.QWidget):
     def __init__(self, exp):
         super().__init__()
         self.gas_mode = Choice(None, [(GAS_PURE, "Один газ"), (GAS_MIX, "Смесь A + B")])
-        self.temperature = ParamControl("Температура T, К", 50, 1500, exp.temperature)
-        self.n_total = ParamControl("Число молекул N", 2, MAX_PARTICLES, exp.n_total)
-        self.mass_a = ParamControl("Масса A, а.е.м.", 1, 200, exp.mass_a)
-        self.mass_b = ParamControl("Масса B, а.е.м.", 1, 200, exp.mass_b)
+        self.temperature = ParamControl("Температура T, К", settings.TEMPERATURE_MIN, settings.TEMPERATURE_MAX, exp.temperature)
+        self.n_total = ParamControl("Число молекул N", settings.N_MIN, settings.N_MAX, exp.n_total)
+        self.mass_a = ParamControl("Масса A, а.е.м.", settings.MASS_MIN, settings.MASS_MAX, exp.mass_a)
+        self.mass_b = ParamControl("Масса B, а.е.м.", settings.MASS_MIN, settings.MASS_MAX, exp.mass_b)
         self.n_b = ParamControl("Молекул B", 1, exp.n_total - 1, exp.n_b_mix)
         self.n_b.setToolTip("1 — в газе A одна «чужая» молекула B")
         self.pair = Choice("Пара молекул", [("AA", "A – A"), ("AB", "A – B"), ("BB", "B – B")])
+
+        self.start = Choice("Начальные скорости", [("maxwell", "Максвелл"), ("beam", "Все одинаковые")])
+        self.start.setToolTip("Все молекулы летят в одну сторону. Столкновения устанавливают распределение Максвелла.")
+        self.collisions = QtWidgets.QCheckBox("Столкновения молекул")
+        self.collisions.setChecked(True)
+        self.collisions.setFocusPolicy(QtCore.Qt.NoFocus)
+        self.collisions.setToolTip("Без столкновений молекулы проходят сквозь друг друга и отражаются только от стенок.")
+        self.start.changed.connect(lambda _: self.gas_changed.emit())
+        self.collisions.toggled.connect(lambda _: self.gas_changed.emit())
 
         # Настройки смеси показываются только в режиме "Смесь"
         self.mix_widgets = (self.mass_b, self.n_b, self.pair)
@@ -39,7 +49,7 @@ class GasPanel(QtWidgets.QWidget):
         self.pair.changed.connect(self.pair_chosen)
         self.temperature.changed.connect(self.temperature_changed)
 
-        self.setFont(style.font(0.85))
+        self.setFont(style.font(settings.GAS_PANEL_FONT))
         self.setLayout(vbox(card(
             self.gas_mode, self.temperature, self.n_total, self.mass_a, *self.mix_widgets,
             title="Газ", spacing=style.px(0.1),
@@ -47,7 +57,7 @@ class GasPanel(QtWidgets.QWidget):
 
     def params(self):
         return GasParams(self.gas_mode.value(), self.mass_a.value(), self.mass_b.value(),
-                         self.n_total.value(), self.n_b.value())
+                         self.n_total.value(), self.n_b.value(), self.start.value(), self.collisions.isChecked())
 
     def sync_with(self, exp):
         """Показать настройки смеси и доступные пары по текущему составу газа."""

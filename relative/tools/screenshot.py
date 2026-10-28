@@ -27,9 +27,20 @@ QUANT = {"vrel": ("pair", "modulus"), "vrelx": ("pair", "projection"),
          "e1": ("single", "energy"), "e2": ("second", "energy")}
 for opt in extra:
     key, _, val = opt.partition("=")
-    if key == "fast":
+    if key == "section":
+        win.theory.show_section(int(val)-1)
+    elif key == "drawer":
+        win.theory.drawer.open()
+        win.theory.drawer.slide.setCurrentTime(180)
+    elif key == "beam":
+        d.gas.start.buttons["beam"].click()
+    elif key == "ensemble":
+        d.run.ensemble_box.setChecked(val != "0")
+    elif key == "zoom":
+        d.zoom_button.click()
+    elif key == "fast":
         d.run.mode.set_value("fast")
-        d.on_mode_changed(True)
+        d.run._on_mode("fast")
     elif key == "add":            # add=v1 — второй график
         d.add_panel(*QUANT[val])
     elif key == "first":          # first=vrelx — что в первом графике

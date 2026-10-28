@@ -1,5 +1,7 @@
 """Общая основа всех графиков презентации."""
 
+import settings
+
 import numpy as np
 import pyqtgraph as pg
 from PyQt5 import QtCore, QtGui, QtWidgets
@@ -13,8 +15,8 @@ def pen(color, width=0.12, dashed=False, dotted=False):
     return pg.mkPen(color, width=style.px(width), style=line)
 
 
-AXIS_WIDTH = 4.2   # ширина левой оси (подпись + числа вроде "-1000"), в базовых шрифтах
-AXIS_HEIGHT = 2.6  # высота нижней оси (числа + подпись)
+AXIS_WIDTH = settings.AXIS_WIDTH   # ширина левой оси (подпись + числа вроде "-1000"), в базовых шрифтах
+AXIS_HEIGHT = settings.AXIS_HEIGHT  # высота нижней оси (числа + подпись)
 
 
 class StaticPlot(pg.PlotWidget):
@@ -36,7 +38,7 @@ class StaticPlot(pg.PlotWidget):
             return
         for name in ("bottom", "left"):
             axis = self.getAxis(name)
-            axis.setStyle(tickFont=style.font(0.8), tickLength=style.px(0.4))
+            axis.setStyle(tickFont=style.font(settings.AXIS_NUMBERS_FONT), tickLength=style.px(0.4))
             axis.setPen(pg.mkPen("k", width=2))
             axis.setTextPen("k")
         # Размер осей постоянный: иначе pyqtgraph подгоняет его под подписи делений,
@@ -47,7 +49,7 @@ class StaticPlot(pg.PlotWidget):
         self.set_axis_label("left", ylabel)
 
     def set_axis_label(self, axis, text):
-        self.getAxis(axis).setLabel(text, **{"font-size": "%dpx" % style.px(0.85)})
+        self.getAxis(axis).setLabel(text, **{"font-size": "%dpx" % style.px(settings.AXIS_LABEL_FONT)})
 
     def set_title(self, text, color="k"):
         self.setTitle(text, size="%dpx" % style.px(0.9), color=color)

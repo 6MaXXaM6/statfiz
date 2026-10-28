@@ -2,6 +2,7 @@
 
 from PyQt5 import QtCore, QtWidgets
 
+import settings
 from ui import style
 
 
@@ -72,7 +73,7 @@ def card(*items, title=None, spacing=None):
     frame = QtWidgets.QFrame()
     frame.setObjectName("card")
     head = [section_title(title)] if title else []
-    m = style.px(0.5)
+    m = style.px(settings.CARD_MARGIN)
     frame.setLayout(vbox(*(head + list(items)), spacing=spacing, margins=(m, m, m, m)))
     return frame
 
@@ -110,7 +111,7 @@ def html_color(text, color, bold=True):
 def header_bar(title, back_callback, extra_buttons=()):
     """Верхняя полоса страницы: кнопка "На главную", заголовок, доп. кнопки."""
     bar = QtWidgets.QWidget()
-    items = [button("◀  На главную", back_callback), (label(title, 1.25, bold=True, center=True, shrinkable=True), 1)]
+    items = [button("◀  На главную", back_callback), (label(title, settings.HEADER_FONT, bold=True, center=True, shrinkable=True), 1)]
     items += [button(text, callback) for text, callback in extra_buttons]
     m = style.px(0.3)
     bar.setLayout(hbox(*items, margins=(m, style.px(0.2), m, style.px(0.2))))

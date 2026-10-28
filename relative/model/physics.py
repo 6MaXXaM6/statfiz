@@ -15,18 +15,19 @@
 """
 
 import numpy as np
+import settings
 
 K_B = 1.380649e-23      # постоянная Больцмана, Дж/К
 AMU = 1.66053907e-27    # атомная единица массы, кг
 
-BOX_SIZE = 100.0        # сторона квадратного сосуда, нм
-MAX_PARTICLES = 300
+BOX_SIZE = settings.BOX_SIZE        # сторона квадратного сосуда, нм
+MAX_PARTICLES = settings.MAX_PARTICLES
 
 # Радиус молекулы пропорционален m^(1/3) (объём пропорционален массе), поэтому
 # отношение размеров на экране честно показывает отношение масс.
 # Самая тяжёлая молекула (M_MAX) имеет радиус R_MAX, самая лёгкая (1 а.е.м.) — R_MIN.
-M_MAX = 200.0                        # а.е.м.
-R_MAX = 2.4                          # нм
+M_MAX = settings.M_MAX                        # а.е.м.
+R_MAX = settings.R_MAX                          # нм
 R_MIN = R_MAX / M_MAX ** (1.0 / 3)   # ≈ 0.41 нм
 
 # Перевод: скорость [м/с] * время [пс] * NM_PER_MS_PS = путь [нм]
@@ -46,7 +47,7 @@ def thermal_sigma(mass_amu, temperature):
 class Gas:
     """Состояние газа и шаг моделирования."""
 
-    def __init__(self, n_a, n_b, mass_a, mass_b, temperature, seed=None):
+    def __init__(self, n_a, n_b, mass_a, mass_b, temperature, seed=None, start="maxwell", collisions=True):
         self.rng = np.random.default_rng(seed)
         self.box = BOX_SIZE
         self.n_a = int(n_a)
@@ -63,9 +64,10 @@ class Gas:
         self.temperature = float(temperature)
         self.time = 0.0  # пс
         self.collisions = 0
+        self.collisions_enabled = collisions
 
         self.pos = self._random_positions(n)
-        self.vel = self._maxwell_velocities()
+        self.vel = self._beam_velocities() if start == "beam" else self._maxwell_velocities()
         self.dt = self.recommended_dt()
 
     @property
@@ -91,6 +93,12 @@ class Gas:
         pos[:, 0] = offset + (cx + 0.5) * cell + jitter[:, 0]
         pos[:, 1] = offset + (cy + 0.5) * cell + jitter[:, 1]
         return pos
+
+    def _beam_velocities(self):
+        """Одна направленность и энергия kT у каждой молекулы."""
+        angle = np.deg2rad(settings.BEAM_ANGLE)
+        speed = np.sqrt(2) * thermal_sigma(self.mass, self.temperature)
+        return speed[:, None] * np.array([np.cos(angle), np.sin(angle)])
 
     def _maxwell_velocities(self):
         """Скорости по распределению Максвелла, затем точная подгонка энергии под T."""
@@ -166,7 +174,8 @@ class Gas:
             dt = self.dt
         self.pos += self.vel * (dt * NM_PER_MS_PS)
         self._bounce_walls()
-        self._collide()
+        if self.collisions_enabled:
+            self._collide()
         self.time += dt
 
     def _bounce_walls(self):

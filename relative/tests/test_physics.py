@@ -2,6 +2,7 @@ import os
 import sys
 
 import numpy as np
+import pytest
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
 
@@ -10,21 +11,52 @@ from model.physics import AMU, K_B, Gas  # noqa: E402
 from model.stats import Histogram  # noqa: E402
 
 
+
+def assert_energy_close(actual, expected, rtol=1e-12):
+    """Относительный допуск: абсолютный 1e-8 Дж здесь был бы огромным."""
+    assert expected > 0
+    np.testing.assert_allclose(actual, expected, rtol=rtol, atol=0)
+
+
+def assert_momentum_close(actual, expected, scale, rtol=1e-12):
+    """Масштаб — сумма |p_i| до удара, даже если полный импульс равен нулю."""
+    assert scale > 0
+    error = np.linalg.norm(np.asarray(actual) - expected) / scale
+    assert np.isfinite(error) and error <= rtol, f"относительная ошибка импульса {error}"
+
+
+@pytest.mark.parametrize("factor", [0, 2, 1.001])
+def test_energy_check_rejects_corruption(factor):
+    energy = 1e-19
+    with pytest.raises(AssertionError):
+        assert_energy_close(factor * energy, energy)
+
+
+@pytest.mark.parametrize("initial", [[0., 0.], [1e-23, -2e-23]])
+def test_momentum_check_rejects_corruption(initial):
+    scale = 1e-22
+    with pytest.raises(AssertionError):
+        assert_momentum_close(np.asarray(initial) + [scale * .01, 0], initial, scale)
+
 def test_initial_energy_matches_temperature():
     gas = Gas(200, 50, 28, 4, 300, seed=1)
-    assert np.isclose(gas.kinetic_energy(), gas.n * K_B * 300)
+    assert_energy_close(gas.kinetic_energy(), gas.n * K_B * 300)
 
 
-def test_collision_conserves_energy_and_momentum():
+@pytest.mark.parametrize("zero_momentum", [False, True])
+def test_collision_conserves_energy_and_momentum(zero_momentum):
     gas = Gas(2, 0, 10, 10, 300, seed=2)
     gas.mass[:] = [10.0, 40.0]
     gas.pos[:] = [[50.0, 50.0], [51.5, 50.3]]  # диски перекрываются
     gas.vel[:] = [[500.0, 100.0], [-300.0, 0.0]]
+    if zero_momentum:
+        gas.vel[:] = [[500., 100.], [-125., -25.]]
+    scale = np.sum(gas.mass * AMU * np.linalg.norm(gas.vel, axis=1))
     e0, p0 = gas.kinetic_energy(), gas.momentum()
     gas._collide()
     assert gas.collisions == 1
-    assert np.isclose(gas.kinetic_energy(), e0)
-    assert np.allclose(gas.momentum(), p0)
+    assert_energy_close(gas.kinetic_energy(), e0)
+    assert_momentum_close(gas.momentum(), p0, scale)
 
 
 def test_energy_conserved_over_many_steps():
@@ -32,7 +64,7 @@ def test_energy_conserved_over_many_steps():
     e0 = gas.kinetic_energy()
     for _ in range(2000):
         gas.step()
-    assert np.isclose(gas.kinetic_energy(), e0, rtol=1e-9)
+    assert_energy_close(gas.kinetic_energy(), e0, rtol=1e-9)
     assert np.all(gas.pos >= 0) and np.all(gas.pos <= gas.box)
 
 
@@ -115,7 +147,7 @@ def test_temperature_and_mass_change_keep_statistics():
     exp.set_temperature(600)
     assert exp.gas is gas and np.isclose(hist.total, total)
     assert np.isclose(hist.edges[-1], exp.value_range(tf.MODULUS, PAIR)[1])
-    assert np.isclose(gas.kinetic_energy(), gas.n * K_B * 600)
+    assert_energy_close(gas.kinetic_energy(), gas.n * K_B * 600)
 
     energy_before = 0.5 * gas.mass * np.sum(gas.vel ** 2, axis=1)
     exp.configure_gas(exp.gas_mode, 4, exp.mass_b, exp.n_total, exp.n_b_mix)  # только масса A
@@ -135,3 +167,40 @@ def test_memory_setting_keeps_statistics():
     total, tau = hist.total, exp.memory_time
     exp.set_memory(30)
     assert np.isclose(hist.total, total) and np.isclose(exp.memory_time, tau / 10)
+
+
+def test_beam_relaxes_only_with_collisions():
+    gas = Gas(150, 0, 28, 28, 300, seed=11, start="beam")
+    speed0 = np.linalg.norm(gas.vel, axis=1)
+    assert np.allclose(gas.vel, gas.vel[0])
+    assert_energy_close(gas.kinetic_energy(), gas.n*K_B*300)
+    walls = Gas(150, 0, 28, 28, 300, seed=11, start="beam", collisions=False)
+    for _ in range(3000):
+        walls.step()
+    assert np.allclose(np.linalg.norm(walls.vel, axis=1), speed0)
+    assert walls.collisions == 0
+    for _ in range(6000):
+        gas.step()
+    samples = []
+    for step in range(3000):
+        gas.step()
+        if step % 50 == 0:
+            samples.extend(np.linalg.norm(gas.vel, axis=1))
+    sigma = tf.sigma_for(28, 300)
+    assert np.isclose(np.mean(samples), tf.mean(tf.MODULUS, sigma), rtol=.05)
+    assert np.isclose(np.var(samples), tf.variance(tf.MODULUS, sigma), rtol=.15)
+
+
+def test_collision_toggle_and_history_restart_preserve_statistics():
+    from model.experiment import Experiment, PAIR
+    exp = Experiment(seed=9)
+    exp.advance(100)
+    hist = exp.hist[PAIR, tf.MODULUS]
+    total, mean = hist.total, hist.mean()
+    gas = exp.gas
+    exp.configure_gas(exp.gas_mode, exp.mass_a, exp.mass_b, exp.n_total, exp.n_b_mix,
+                      collisions=False)
+    assert exp.gas is gas and not gas.collisions_enabled
+    exp.restart_history()
+    assert exp.series[PAIR, tf.MODULUS].count == 0
+    assert hist.total == total and hist.mean() == mean

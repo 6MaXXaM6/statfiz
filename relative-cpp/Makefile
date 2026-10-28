@@ -5,7 +5,13 @@
 #   make layout   — проверка компоновки на трёх разрешениях
 #   make run      — запустить в окне
 
+ifeq ($(shell uname -s),Darwin)
+QT_DIR ?= $(shell brew --prefix)/opt/qt@5
+JOBS ?= $(shell sysctl -n hw.ncpu 2>/dev/null || echo 2)
+else
 QT_DIR ?= $(HOME)/Qt/5.15.2/gcc_64
+JOBS ?= $(shell nproc)
+endif
 DEV     = build/dev
 CMAKE_DEV = cmake -S . -B $(DEV) -DCMAKE_BUILD_TYPE=Release $(if $(wildcard $(QT_DIR)),-DCMAKE_PREFIX_PATH=$(QT_DIR))
 
@@ -15,7 +21,7 @@ all: test linux windows
 
 dev:
 	@$(CMAKE_DEV) >/dev/null
-	@cmake --build $(DEV) -j$$(nproc)
+	@cmake --build $(DEV) -j$(JOBS)
 
 test: dev
 	$(DEV)/test_model

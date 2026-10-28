@@ -3,6 +3,8 @@
 Здесь нет ничего про интерфейс — только логика, которую показывает страница демонстрации.
 """
 
+import settings
+
 import math
 import time
 
@@ -25,31 +27,33 @@ ENERGY_UNIT = 1e-21  # энергия показывается в единица
 GAS_PURE = "pure"  # только газ A
 GAS_MIX = "mix"    # смесь газов A и B (при N_B = 1 — одна "чужая" молекула в газе A)
 
-HIST_BINS = 30            # число столбиков гистограмм по умолчанию
-BINS_RANGE = (10, 80)     # сколько столбиков можно выбрать
-ENSEMBLE_EVERY = 10  # как часто (в шагах) добавлять статистику по всем молекулам
+HIST_BINS = settings.START_BINS            # число столбиков гистограмм по умолчанию
+BINS_RANGE = (settings.BINS_MIN, settings.BINS_MAX)     # сколько столбиков можно выбрать
+ENSEMBLE_EVERY = settings.ENSEMBLE_EVERY  # как часто (в шагах) добавлять статистику по всем молекулам
 
 # Память статистики: старые отсчёты забываются экспоненциально, exp(-t/tau),
 # tau = MEMORY_COLLISIONS средних времён между столкновениями молекулы 1.
 # Подобрано тестом tools/forgetting_test.py: расстояние L1 между гистограммой |v_отн|
 # (30 столбиков) и теорией — медиана 0.26 при K=100, 0.15 при K=300, 0.08 при K=1000.
 # K=300 — шум уже мал, а память ещё короткая (~7.6 нс при 300 К: ~40 с быстрого режима).
-MEMORY_COLLISIONS = 300
-MEMORY_RANGE = (10, 5000)  # сколько столкновений памяти можно выбрать в настройках
+MEMORY_COLLISIONS = settings.START_MEMORY
+MEMORY_RANGE = (settings.MEMORY_MIN, settings.MEMORY_MAX)  # сколько столкновений памяти можно выбрать в настройках
 
 
 class Experiment:
     def __init__(self, seed=None):
         self.rng = np.random.default_rng(seed)
         # Параметры, которые меняет пользователь
-        self.n_total = 150
+        self.n_total = settings.START_N
         self.gas_mode = GAS_PURE
-        self.n_b_mix = 50
-        self.mass_a = 28     # а.е.м. (азот)
-        self.mass_b = 4      # а.е.м. (гелий)
-        self.temperature = 300
+        self.n_b_mix = settings.START_N_B
+        self.mass_a = settings.START_MASS_A     # а.е.м. (азот)
+        self.mass_b = settings.START_MASS_B      # а.е.м. (гелий)
+        self.temperature = settings.START_TEMPERATURE
+        self.start = "maxwell"
+        self.collisions_enabled = True
         self.pair_type = "AA"
-        self.ensemble = False  # добавлять ли статистику по всем молекулам (быстрый режим)
+        self.ensemble = settings.START_ENSEMBLE  # добавлять ли статистику по всем молекулам (быстрый режим)
         self.memory_collisions = MEMORY_COLLISIONS
         self.bins = HIST_BINS
         self.rebuild()
@@ -62,13 +66,16 @@ class Experiment:
             return 0
         return int(min(max(self.n_b_mix, 1), self.n_total - 1))
 
-    def configure_gas(self, gas_mode, mass_a, mass_b, n_total, n_b):
+    def configure_gas(self, gas_mode, mass_a, mass_b, n_total, n_b, start="maxwell", collisions=True):
         """Новые параметры газа.
 
         Если изменились только массы — газ остаётся тем же, статистика сохраняется
         (см. set_masses). Если изменились число или состав молекул — газ создаётся заново.
         """
-        same_molecules = (gas_mode, n_total, n_b) == (self.gas_mode, self.n_total, self.n_b_mix)
+        same_molecules = (gas_mode, n_total, n_b, start) == (self.gas_mode, self.n_total, self.n_b_mix, self.start)
+        self.start = start
+        self.collisions_enabled = collisions
+        self.gas.collisions_enabled = collisions
         if same_molecules:
             self.set_masses(mass_a, mass_b)
             return
@@ -92,7 +99,8 @@ class Experiment:
         n_total = int(min(max(self.n_total, 2), MAX_PARTICLES))
         n_b = self.n_b()
         self.gas = Gas(n_total - n_b, n_b, self.mass_a, self.mass_b, self.temperature,
-                       seed=int(self.rng.integers(1 << 31)))
+                       seed=int(self.rng.integers(1 << 31)), start=self.start,
+                       collisions=self.collisions_enabled)
         if self.pair_type not in self.available_pair_types():
             self.pair_type = self.available_pair_types()[0]
         self.choose_pair(self.pair_type)
@@ -196,6 +204,10 @@ class Experiment:
         self.steps_since_reset = 0
         self._memory_time = self.memory_time
 
+    def restart_history(self):
+        """Смена скорости показа: новая история времени, прежние гистограммы."""
+        self.series = {key: TimeSeries() for key in self.series}
+
     def set_memory(self, collisions):
         """Сколько столкновений помнит статистика; накопленное не сбрасывается."""
         self.memory_collisions = int(collisions)
@@ -229,6 +241,10 @@ class Experiment:
         speed_sq = v[..., 0] ** 2 + v[..., 1] ** 2
         energy = 0.5 * self.mass(obj) * AMU * speed_sq / ENERGY_UNIT
         return {tf.MODULUS: np.sqrt(speed_sq), tf.PROJECTION: v[..., 0], tf.ENERGY: energy}
+
+    def current_value(self, obj, kind):
+        """Мгновенное значение из текущих скоростей, независимо от истории."""
+        return float(self._values(obj, self.velocity(obj))[kind])
 
     def _sample_selected(self):
         t = self.gas.time

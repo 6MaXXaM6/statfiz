@@ -74,3 +74,19 @@ def test_rebin_to_other_bin_count():
     # Мельче: веса делятся пропорционально перекрытию — без пустых "через один" столбиков
     h.rebin(0, 10, bins=40)
     assert np.isclose(h.counts.sum(), total) and np.all(h.counts > 0)
+
+
+def test_history_compaction_preserves_peaks_and_moments():
+    ts = TimeSeries(size=16)
+    values = np.zeros(1003)
+    values[11], values[97], values[998] = 10000, -3000, 75
+    for t, v in enumerate(values):
+        ts.add(t, v)
+    b = np.array(ts.buckets)
+    assert len(b) <= 16
+    assert b[:, 2].min() == values.min()
+    assert b[:, 3].max() == values.max()
+    assert b[:, 5].sum() == len(values)
+    assert np.isclose(b[:, 6].sum(), values.sum())
+    assert np.isclose(b[:, 7].sum(), np.square(values).sum())
+    assert b[0, 0] == 0 and b[-1, 1] == len(values)-1

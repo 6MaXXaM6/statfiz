@@ -1,5 +1,7 @@
 """Панель графика: выбор величины, график во времени и распределение рядом с ним."""
 
+import settings
+
 import numpy as np
 from PyQt5 import QtCore, QtWidgets
 
@@ -10,7 +12,7 @@ from ui.plots.hist_plot import HistPlot
 from ui.plots.time_plot import TimePlot
 from ui.widgets import button, hbox, label, vbox
 
-SIDE_STATS_WIDTH = 14       # ширина подписей справа от графиков (в базовых шрифтах)
+SIDE_STATS_WIDTH = settings.SIDE_STATS_WIDTH       # ширина подписей справа от графиков (в базовых шрифтах)
 QWIDGETSIZE_MAX = (1 << 24) - 1  # "без ограничения" для setMaximumWidth/Height в Qt
 
 # Что можно выбрать в панели: (что наблюдаем, какая величина)
@@ -34,12 +36,12 @@ class GraphPanel(QtWidgets.QWidget):
     def __init__(self, obj=PAIR, kind=tf.MODULUS, closable=False):
         super().__init__()
         self.selector = QtWidgets.QComboBox()
-        self.selector.setFont(style.font(1.1, bold=True))
+        self.selector.setFont(style.font(settings.SELECTOR_FONT, bold=True))
         for o, k in QUANTITIES:
             self.selector.addItem(labels.quantity_plain(o, k))
         self.selector.setCurrentIndex(QUANTITIES.index((obj, kind)))
         self.selector.currentIndexChanged.connect(lambda _i: self.quantity_changed.emit())
-        self.value = label(size=1.2)
+        self.value = label(size=settings.VALUE_FONT)
         self.value.setSizePolicy(QtWidgets.QSizePolicy.Ignored, QtWidgets.QSizePolicy.Fixed)
         header = [self.selector, (self.value, 1)]
         if closable:
@@ -50,7 +52,7 @@ class GraphPanel(QtWidgets.QWidget):
         self.hist_plot.setYLink(self.time_plot)
         self.hist_plot.rotate_clicked.connect(self.rotate)
         self.plots_row = hbox((self.time_plot, 3), (self.hist_plot, 2), spacing=0)
-        self.stats = label(size=0.85, shrinkable=True)
+        self.stats = label(size=settings.STATS_FONT, shrinkable=True)
         # Графики и подписи (среднее, дисперсия): подписи под графиками или, когда графики
         # на весь экран, справа от них — чтобы графики не становились слишком длинными.
         self.body = QtWidgets.QBoxLayout(QtWidgets.QBoxLayout.TopToBottom)
@@ -73,13 +75,13 @@ class GraphPanel(QtWidgets.QWidget):
             self.stats.setMinimumHeight(0)
             self.stats.setMaximumHeight(QWIDGETSIZE_MAX)
             self.stats.setAlignment(QtCore.Qt.AlignLeft | QtCore.Qt.AlignVCenter)
-            self.stats.setFont(style.font(1.0))
+            self.stats.setFont(style.font(settings.SIDE_STATS_FONT))
         else:
             self.body.setDirection(QtWidgets.QBoxLayout.TopToBottom)
             self.stats.setSizePolicy(QtWidgets.QSizePolicy.Ignored, QtWidgets.QSizePolicy.Preferred)
             self.stats.setMinimumWidth(0)
             self.stats.setMaximumWidth(QWIDGETSIZE_MAX)
-            self.stats.setFont(style.font(0.85))
+            self.stats.setFont(style.font(settings.STATS_FONT))
             # Высота постоянная: иначе от цифр (минус, степени) она меняется на пиксель,
             # и графики над ними дрожат.
             self.stats.setFixedHeight(2 * self.stats.fontMetrics().lineSpacing() + style.px(0.4))
@@ -102,6 +104,7 @@ class GraphPanel(QtWidgets.QWidget):
         self.time_plot.setVisible(sideways)
         if self._hist_args:
             self.hist_plot.configure(*self._hist_args)
+        self.quantity_changed.emit()  # перерисовать и на паузе, не дожидаясь шага
 
     def configure(self, exp, low, high, peak):
         """Диапазон значений и масштаб плотности задаёт страница (у двух панелей они могут быть общими)."""
@@ -117,8 +120,7 @@ class GraphPanel(QtWidgets.QWidget):
     def refresh(self, exp, fast):
         obj, kind = self.quantity
         series = exp.series[obj, kind]
-        last = series.last()
-        current = last[1] if last else None
+        current = exp.current_value(obj, kind)
         # Новое значение "подращивает" свой столбик — в медленном режиме он подсвечивается.
         new_sample = series.count > self._last_count
         self._last_count = series.count
@@ -128,7 +130,7 @@ class GraphPanel(QtWidgets.QWidget):
                                                labels.unit(kind)))
         if self.time_plot.isVisible():
             theory_mean = tf.mean(kind, exp.scale(obj, kind)) if kind != tf.PROJECTION else None
-            self.time_plot.update_view(series, theory_mean)
+            self.time_plot.update_view(series, theory_mean, current=(exp.gas.time, current))
         self.hist_plot.update_view(exp.hist[obj, kind], current, highlight=new_sample and not fast)
         self.stats.setText(stats_text(exp, obj, kind))
 

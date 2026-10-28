@@ -1,0 +1,4 @@
+relative/.venv-macos/
+relative/dist/macos/
+relative/build/macos/
+relative/build/smoke-macos.txt

@@ -2,9 +2,11 @@
 Страница "Презентация". Собирает части и связывает их с экспериментом:
 
     слева    — сосуд с молекулами и кнопки хода расчёта;
-    в центре — один или два графика (по умолчанию |v_отн|; "+ Добавить график" — второй);
-    справа   — параметры газа, число столбиков гистограмм и векторная диаграмма скоростей.
+    в центре — один или два графика (по умолчанию |v_отн| и |v₁|);
+    справа   — параметры газа и векторная диаграмма скоростей.
 """
+
+import settings
 
 from PyQt5 import QtCore, QtWidgets
 
@@ -20,10 +22,10 @@ from ui.plots.box_view import BoxView
 from ui.plots.vector_view import VectorView
 from ui.widgets import ParamControl, button, card, hbox, header_bar, label, vbox
 
-FAST_BUDGET = 0.020     # быстрый режим: секунд расчёта на один кадр
-VECTOR_RADIUS = 2.6     # радиус векторной диаграммы в единицах наибольшей sqrt(kT/m)
-CLICK_DISTANCE = 4.0    # на каком расстоянии (нм) от молекулы щелчок её выбирает
-MIDDLE_MIN = 24         # наименьшая ширина средней колонки (в базовых шрифтах)
+FAST_BUDGET = settings.FAST_BUDGET     # быстрый режим: секунд расчёта на один кадр
+VECTOR_RADIUS = settings.VECTOR_RADIUS     # радиус векторной диаграммы в единицах наибольшей sqrt(kT/m)
+CLICK_DISTANCE = settings.CLICK_DISTANCE    # на каком расстоянии (нм) от молекулы щелчок её выбирает
+MIDDLE_MIN = settings.MIDDLE_MIN         # наименьшая ширина средней колонки (в базовых шрифтах)
 MAX_PANELS = 2
 SECOND_PANEL = (SINGLE, tf.MODULUS)  # второй график сначала показывает |v₁| — для сравнения с |v_отн|
 
@@ -38,7 +40,7 @@ class DemoPage(QtWidgets.QWidget):
         self.box = BoxView()
         self.run = RunControls()
         self.vectors = VectorView()
-        self.legend = label(size=1.1, center=True)
+        self.legend = label(size=settings.LEGEND_FONT, center=True)
         self.gas = GasPanel(self.exp)
         self.bins = ParamControl("Столбиков", *BINS_RANGE, self.exp.bins, show_slider=False)
         self.bins.setToolTip("Число столбиков в гистограммах; накопленная статистика сохраняется")
@@ -50,7 +52,7 @@ class DemoPage(QtWidgets.QWidget):
             "Больше — глаже, но дольше помнит старое. 300 — подобрано статистическим тестом.")
         self.panels = []
         self.panels_box = vbox(spacing=style.px(0.5))
-        self.add_button = button("+  Добавить график", lambda: self.add_panel(*SECOND_PANEL))
+        self.add_button = button("+  График", lambda: self.add_panel(*SECOND_PANEL))
         # Кнопка "графики на весь экран": квадратная, той же высоты, что "+ Добавить график"
         self.zoom_button = button("", self.toggle_graphs_zoom, checkable=True)
         side = self.add_button.sizeHint().height()
@@ -58,18 +60,17 @@ class DemoPage(QtWidgets.QWidget):
         self.zoom_button.setIcon(zoom_icon(side))
         self.zoom_button.setIconSize(QtCore.QSize(int(side * 0.6), int(side * 0.6)))
         self.zoom_button.setToolTip("Графики на весь экран (сосуд и настройки скрываются)")
-        self.ratio = label(size=1.0, shrinkable=True)
+        self.ratio = label(size=settings.RATIO_FONT, shrinkable=True)
         # Высота строки сравнения постоянная (две строки), чтобы графики не прыгали, когда она появляется.
         self.ratio.setFixedHeight(2 * self.ratio.fontMetrics().lineSpacing() + style.px(0.3))
 
         # Слева: сосуд (квадратный, размер задаёт _fit_box) и кнопки хода расчёта
         self.box_card = card(self.box)
         self.box_card.setSizePolicy(QtWidgets.QSizePolicy.Preferred, QtWidgets.QSizePolicy.Ignored)
-        self.run_card = card(self.run)
+        self.run_card = card(self.run, self.gas.start, self.gas.collisions)
         self.run_card.setSizePolicy(QtWidgets.QSizePolicy.Preferred, QtWidgets.QSizePolicy.Fixed)
         self.left = QtWidgets.QWidget()
         self.left.setLayout(vbox((self.box_card, 1), self.run_card))
-        self.left.layout().addStretch(0)
 
         # Справа: параметры газа и векторы (векторы сжимаются, если места мало)
         vectors_box = vbox(self.vectors, (self.legend, 1))
@@ -84,10 +85,10 @@ class DemoPage(QtWidgets.QWidget):
         self.right.setFixedWidth(self.right_width)
 
         # Под графиками: строка сравнения (√2), затем число столбиков, "+ график" и "на весь экран"
-        middle = card((self.panels_box, 1), self.ratio,
-                      hbox(vbox(self.bins, self.memory, spacing=style.px(0.1)), None,
-                           self.add_button, self.zoom_button, spacing=style.px(0.4)),
+        middle = card((self.panels_box, 1), hbox((self.ratio, 1), self.add_button, spacing=style.px(0.4)),
+                      hbox(self.bins, self.memory, None, self.zoom_button, spacing=style.px(0.6)),
                       spacing=style.px(0.3))
+        self.middle = middle
         m = style.px(0.4)
         body = hbox(self.left, (middle, 1), self.right, spacing=m, margins=(m, 0, m, m))
         self.header = header_bar("Относительная скорость молекул идеального газа", self._leaving(go_home),
@@ -98,6 +99,7 @@ class DemoPage(QtWidgets.QWidget):
         self.run.started.connect(self.on_start)
         self.run.tick.connect(self.on_tick)
         self.run.mode_changed.connect(self.on_mode_changed)
+        self.run.ensemble_changed.connect(self.on_ensemble_changed)
         self.box.clicked.connect(self.on_box_clicked)
         self.gas.gas_changed.connect(self.on_gas_changed)
         self.gas.pair_chosen.connect(lambda key: self._changed(self.exp.choose_pair, key))
@@ -105,7 +107,17 @@ class DemoPage(QtWidgets.QWidget):
         self.bins.changed.connect(lambda n: self._changed(self.exp.set_bins, n))
         self.memory.changed.connect(self.exp.set_memory)
 
+        self.exp.ensemble = self.run.ensemble_box.isChecked()
         self.add_panel(PAIR, tf.MODULUS)
+        if settings.START_TWO_PANELS:
+            self.add_next_panel()
+        self._autostarted = False
+
+    def showEvent(self, event):
+        super().showEvent(event)
+        if settings.AUTOSTART and not self._autostarted and self.run.state == "stopped":
+            self._autostarted = True
+            self.run.start()
 
     # ------------------------------------------------------------------
     # Компоновка
@@ -133,7 +145,7 @@ class DemoPage(QtWidgets.QWidget):
         # Высота — из высоты страницы, а не текущей высоты колонки (иначе сосуд не уменьшится).
         free_height = self.height() - self.header.height() - gap - self.run_card.sizeHint().height() - spacing
         side = free_height - (margins.top() + margins.bottom()) + margins.left() + margins.right()
-        room = self.width() - self.right_width - style.px(MIDDLE_MIN) - 4 * gap
+        room = self.width() - self.right_width - max(style.px(settings.MIDDLE_MIN), self.middle.minimumSizeHint().width()) - 4 * gap
         width = max(min(side, room), self.run_card.minimumSizeHint().width())
         height = min(width, free_height)
         # Меняем размеры только если они другие — иначе Qt будет бесконечно перекладывать виджеты.
@@ -194,12 +206,23 @@ class DemoPage(QtWidgets.QWidget):
         self.refresh()
 
     def on_mode_changed(self, fast):
-        # Быстрый режим — для набора статистики: считаем её сразу по всем молекулам.
-        self.exp.ensemble = fast
+        self.exp.ensemble = self.run.ensemble_box.isChecked()
+        self.exp.restart_history()
+        self.on_experiment_changed()
+
+    def on_ensemble_changed(self, enabled):
+        self.exp.ensemble = enabled
         self.refresh()
 
     def on_gas_changed(self):
-        self.exp.configure_gas(*self.gas.params())
+        params = self.gas.params()
+        if params.start != self.exp.start:
+            beam = params.start == "beam"
+            memory = settings.RELAX_MEMORY if beam else settings.START_MEMORY
+            self.memory.set_value_silently(memory)
+            self.exp.set_memory(memory)
+            self.run.speed.set_value_silently(settings.RELAX_SPEED if beam else settings.START_SPEED)
+        self.exp.configure_gas(*params)
         self.on_experiment_changed()
 
     def on_box_clicked(self, x, y, which):

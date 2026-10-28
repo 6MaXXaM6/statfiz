@@ -128,50 +128,54 @@ class Histogram:
 
 
 class TimeSeries:
-    """Вся история величины во времени в ограниченном числе точек.
+    """История в ограниченной памяти без потери пиков и статистики.
 
-    Пока место есть, запоминается каждый отсчёт. Когда буфер заполнен, каждая
-    вторая точка выбрасывается, а новые отсчёты записываются через один (потом
-    через три и т.д.). Так график "схлопывается": ось времени всегда от 0 до
-    текущего момента, а памяти нужно не больше `size` точек.
+    Корзина хранит t0, t1, min, max, last, n, sum, sum_sq. При заполнении
+    соседние корзины сливаются попарно. Каждый новый отсчёт учитывается.
     """
 
-    def __init__(self, size=1000):
+    def __init__(self, size=4096):
+        if size < 2:
+            raise ValueError("нужно хотя бы две корзины")
         self.size = size - size % 2
-        self.t = np.zeros(self.size)
-        self.v = np.zeros(self.size)
         self.reset()
 
     def reset(self):
-        self.n = 0          # сколько точек в буфере
-        self.stride = 1     # в буфер попадает каждый stride-й отсчёт
-        self.count = 0      # сколько всего было отсчётов
-        self._last = None
+        self.buckets = []
+        self.span = 1
+        self.count = 0
+        self._first = self._last = None
 
     def add(self, t, v):
-        if self.count % self.stride == 0:
-            if self.n == self.size:
-                self._thin_out()
-            self.t[self.n] = t
-            self.v[self.n] = v
-            self.n += 1
+        if not self.buckets or self.buckets[-1][5] == self.span:
+            if len(self.buckets) == self.size:
+                self._merge_pairs()
+            self.buckets.append([t, t, v, v, v, 1, v, v*v])
+        else:
+            b = self.buckets[-1]
+            b[1], b[2], b[3], b[4] = t, min(b[2], v), max(b[3], v), v
+            b[5] += 1
+            b[6] += v
+            b[7] += v*v
+        if self._first is None:
+            self._first = (t, v)
         self.count += 1
         self._last = (t, v)
 
-    def _thin_out(self):
-        half = self.size // 2
-        self.t[:half] = self.t[0:self.size:2]
-        self.v[:half] = self.v[0:self.size:2]
-        self.n = half
-        self.stride *= 2
+    def _merge_pairs(self):
+        self.buckets = [[a[0], b[1], min(a[2],b[2]), max(a[3],b[3]), b[4],
+                         a[5]+b[5], a[6]+b[6], a[7]+b[7]]
+                        for a,b in zip(self.buckets[::2], self.buckets[1::2])]
+        self.span *= 2
 
     def data(self):
-        """Массивы (t, v) в хронологическом порядке, последний отсчёт — всегда в конце."""
-        t, v = self.t[:self.n], self.v[:self.n]
-        if self._last is not None and (self.n == 0 or t[-1] != self._last[0]):
-            t = np.append(t, self._last[0])
-            v = np.append(v, self._last[1])
-        return t, v
+        """Представительные точки для совместимости; полная статистика — buckets."""
+        if not self.buckets:
+            return np.array([]), np.array([])
+        points = [(b[1], b[4]) for b in self.buckets]
+        if points[0][0] != self._first[0]:
+            points.insert(0, self._first)
+        return tuple(np.asarray(points).T)
 
     def last(self):
         return self._last

@@ -1,5 +1,7 @@
 """Векторная диаграмма скоростей."""
 
+import settings
+
 import pyqtgraph as pg
 from PyQt5 import QtCore, QtWidgets
 
@@ -25,7 +27,7 @@ class VectorView(StaticPlot):
         self.proj = Arrow(style.PROJ, width=0.35)
         self.add_all(self.x_label, self.v1, self.v2, self.rel, self.proj)
         self.radius = 1.0
-        self.set_sizes(10, 4)
+        self.set_sizes(settings.VECTOR_SIZE, settings.VECTOR_MIN_SIZE)
 
     def set_sizes(self, preferred, minimum):
         """Желаемая и наименьшая сторона (в базовых шрифтах). Если места мало, компоновка
