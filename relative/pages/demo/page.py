@@ -6,6 +6,8 @@
     справа   — параметры газа и векторная диаграмма скоростей.
 """
 
+import time
+
 import settings
 
 from PyQt5 import QtCore, QtWidgets
@@ -34,6 +36,7 @@ class DemoPage(QtWidgets.QWidget):
     def __init__(self, go_home, go_theory):
         super().__init__()
         self.exp = Experiment()
+        self._last_plot_refresh = 0.
         self.projection_of = None
 
         # --- части страницы ---
@@ -96,6 +99,7 @@ class DemoPage(QtWidgets.QWidget):
         self.setLayout(vbox(self.header, (body, 1), spacing=0))
 
         # --- связи ---
+        self.run.state_changed.connect(self.on_run_state_changed)
         self.run.started.connect(self.on_start)
         self.run.tick.connect(self.on_tick)
         self.run.mode_changed.connect(self.on_mode_changed)
@@ -211,8 +215,17 @@ class DemoPage(QtWidgets.QWidget):
         if fast:
             self.exp.advance_for_seconds(FAST_BUDGET)
         else:
-            self.exp.advance_by(factor)
-        self.refresh()
+            self.exp.advance_by(factor, seconds=FAST_BUDGET)
+        due = time.perf_counter() - self._last_plot_refresh >= settings.PLOT_REFRESH_MS / 1000.
+        self.refresh(plots=due or self.run.state != "running")
+
+    def on_run_state_changed(self, state):
+        if state != "running":
+            self.refresh()  # на паузе все подписи показывают последний рассчитанный шаг
+
+    def hideEvent(self, event):
+        self.run.pause()
+        super().hideEvent(event)
 
     def on_mode_changed(self, fast):
         self.exp.ensemble = self.run.ensemble_box.isChecked()
@@ -277,10 +290,13 @@ class DemoPage(QtWidgets.QWidget):
         if not self._comparisons():
             self.ratio.setText("")
 
-    def refresh(self):
+    def refresh(self, plots=True):
         exp = self.exp
         self.box.update_view(exp, PAIR)
         self.vectors.update_view(exp, self.projection_of)
+        if not plots:
+            return
+        self._last_plot_refresh = time.perf_counter()
         for panel in self.panels:
             panel.refresh(exp, self.run.fast)
         comparisons = self._comparisons()

@@ -38,15 +38,18 @@ class TitlePage(QtWidgets.QWidget):
     def __init__(self, on_demo, on_theory, on_authors, on_exit):
         super().__init__()
         title = label(TITLE, settings.TITLE_FONT, bold=True, center=True, color="#1c3f7a", shrinkable=True)
+        self.heading = title
         title.setMinimumHeight(style.px(6))
         subtitle = label(SUBTITLE, settings.SUBTITLE_FONT, center=True, wrap=True)
-        buttons = vbox(spacing=style.px(0.45))
+        self.subtitle = subtitle
+        buttons = vbox(spacing=style.px(0.6))
         self.menu = QtWidgets.QWidget()
         self.menu.setLayout(buttons)
         self.rescale_fonts()
         for text, callback in (("Презентация", on_demo), ("Теория по теме", on_theory),
                                ("Авторы", on_authors), ("Выход", on_exit)):
             b = button(text, callback, name="big")
+            b.setProperty("primary", text == "Презентация")
             buttons.addWidget(b)
         m = style.px(2)
         self.setLayout(vbox(
@@ -56,4 +59,10 @@ class TitlePage(QtWidgets.QWidget):
         ))
 
     def rescale_fonts(self):
-        self.menu.setFixedWidth(min(320, max(220, style.px(18))))
+        self.menu.setFixedWidth(min(380, max(280, style.px(22))))
+        heading = style.font(settings.TITLE_FONT, bold=True)
+        heading.setPixelSize(max(30, min(48, heading.pixelSize())))
+        self.heading.setFont(heading)
+        subtitle = style.font(settings.SUBTITLE_FONT)
+        subtitle.setPixelSize(max(15, min(23, subtitle.pixelSize())))
+        self.subtitle.setFont(subtitle)

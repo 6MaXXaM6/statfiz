@@ -153,10 +153,19 @@ class Gas:
             if len(ii) == 0:
                 return
             for i, j in zip(ii, jj):
-                d = self.pos[j] - self.pos[i]
-                dist = np.hypot(d[0], d[1])
-                if dist > 0:
-                    self._push_apart(i, j, d / dist, dist)
+                # Для двух координат скаляры дешевле множества временных
+                # numpy-массивов; порядок последовательного раздвигания тот же.
+                dx = float(self.pos[j, 0] - self.pos[i, 0])
+                dy = float(self.pos[j, 1] - self.pos[i, 1])
+                dist = float(np.hypot(dx, dy))
+                overlap = float(self.radius[i] + self.radius[j]) - dist
+                if dist > 0 and overlap > 0:
+                    shift_x = .5 * overlap * (dx / dist)
+                    shift_y = .5 * overlap * (dy / dist)
+                    self.pos[i, 0] -= shift_x
+                    self.pos[i, 1] -= shift_y
+                    self.pos[j, 0] += shift_x
+                    self.pos[j, 1] += shift_y
             for axis in (0, 1):
                 np.clip(self.pos[:, axis], self.radius, self.box - self.radius, out=self.pos[:, axis])
 

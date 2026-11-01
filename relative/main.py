@@ -6,6 +6,11 @@
 import os
 import sys
 
+# Для массивов до 300 частиц пул потоков BLAS только расходует ресурсы.
+# Задаётся до первого импорта NumPy через UI.
+for _thread_option in ("OPENBLAS_NUM_THREADS", "MKL_NUM_THREADS", "OMP_NUM_THREADS"):
+    os.environ.setdefault(_thread_option, "1")
+
 from PyQt5 import QtCore, QtWidgets
 
 # Включаем масштабирование для экранов с увеличенным DPI (до создания приложения).

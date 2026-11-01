@@ -77,7 +77,8 @@ class Experiment:
         self.collisions_enabled = collisions
         self.gas.collisions_enabled = collisions
         if same_molecules:
-            self.set_masses(mass_a, mass_b)
+            if (mass_a, mass_b) != (self.mass_a, self.mass_b):
+                self.set_masses(mass_a, mass_b)
             return
         self.gas_mode = gas_mode
         self.mass_a = mass_a
@@ -287,12 +288,24 @@ class Experiment:
             if self.ensemble and self.steps_since_reset % ENSEMBLE_EVERY == 0:
                 self._sample_ensemble()
 
-    def advance_by(self, factor):
-        """Смоделировать время factor·dt (шагами не длиннее dt)."""
-        n = max(1, int(math.ceil(factor)))
-        self.advance(n, self.gas.dt * factor / n)
+    def advance_by(self, factor, seconds=None):
+        """Шаги не длиннее dt; с бюджетом — вернуть управление между шагами.
 
-    def advance_for_seconds(self, seconds, chunk=5):
+        При нехватке времени опыт идёт медленнее; физическое время и отсчёты
+        не перескакивают через невыполненные шаги.
+        """
+        n = max(1, int(math.ceil(factor)))
+        dt = self.gas.dt * factor / n
+        if seconds is None:
+            self.advance(n, dt)
+            return
+        deadline = time.perf_counter() + seconds
+        for _ in range(n):
+            self.advance(1, dt)
+            if time.perf_counter() >= deadline:
+                break
+
+    def advance_for_seconds(self, seconds, chunk=1):
         """Считать шагами dt, пока не пройдёт seconds секунд реального времени."""
         started = time.perf_counter()
         while time.perf_counter() - started < seconds:

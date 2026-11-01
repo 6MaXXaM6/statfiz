@@ -17,6 +17,7 @@ class TimePlot(StaticPlot):
 
     def __init__(self):
         super().__init__(xlabel="время t, пс")
+        self._history_key = None
         self.curve = self.plot(pen=pen(style.REL, settings.CURVE_LINE))
         self.live_tail = self.plot(pen=pen(style.REL, settings.CURVE_LINE))
         self.low_edge = pg.PlotCurveItem(pen=pg.mkPen(style.REL, width=1))
@@ -40,37 +41,28 @@ class TimePlot(StaticPlot):
         self.setYRange(low, high, padding=0)
 
     def update_view(self, series, theory_mean=None, current=None):
-        t, v = series.data()
-        bins = max(int(self.getViewBox().width()), 1)
-        dense = series.span > 1 or len(series.buckets) >= bins
-        if dense and series.buckets:
-            buckets = np.asarray(series.buckets)
-            count = min(bins, len(buckets))
-            # Раскладываем корзины по времени, объединяя их точные моменты.
-            start, end = buckets[0, 0], buckets[-1, 1]
-            index = np.clip(((buckets[:, 0]+buckets[:, 1])/2-start) /
-                            max(end-start, 1e-12)*count, 0, count-1).astype(int)
-            n = np.bincount(index, weights=buckets[:, 5], minlength=count)
-            sums = np.bincount(index, weights=buckets[:, 6], minlength=count)
-            squares = np.bincount(index, weights=buckets[:, 7], minlength=count)
-            lo, hi = np.full(count, np.inf), np.full(count, -np.inf)
-            np.minimum.at(lo, index, buckets[:, 2])
-            np.maximum.at(hi, index, buckets[:, 3])
-            valid = n > 0
-            means = sums[valid]/n[valid]
-            sigma = np.sqrt(np.maximum(squares[valid]/n[valid]-means**2, 0))
-            tb = start+(np.arange(count)[valid]+.5)*(end-start)/count
-            self.low_edge.setData(tb, lo[valid])
-            self.high_edge.setData(tb, hi[valid])
-            self.spread_low.setData(tb, means-sigma)
-            self.spread_high.setData(tb, means+sigma)
-            self.average.setData(tb, means)
-            self.curve.setData([], [])
-        else:
-            self.curve.setData(t, v)
-        for item in (self.band, self.low_edge, self.high_edge, self.spread,
-                     self.spread_low, self.spread_high, self.average):
-            item.setVisible(dense)
+        bins = min(settings.HISTORY_PLOT_POINTS, max(int(self.getViewBox().width()), 1))
+        key = series, series.count, bins
+        if key != self._history_key:
+            dense = series.span > 1 or len(series.buckets) >= bins
+            if dense and series.buckets:
+                buckets = series.summary(bins)
+                means = buckets[:, 6] / buckets[:, 5]
+                sigma = np.sqrt(np.maximum(buckets[:, 7] / buckets[:, 5] - means**2, 0))
+                tb = (buckets[:, 0] + buckets[:, 1]) * .5
+                self.low_edge.setData(tb, buckets[:, 2])
+                self.high_edge.setData(tb, buckets[:, 3])
+                self.spread_low.setData(tb, means - sigma)
+                self.spread_high.setData(tb, means + sigma)
+                self.average.setData(tb, means)
+                self.curve.setData([], [])
+            else:
+                t, v = series.data()
+                self.curve.setData(t, v)
+            for item in (self.band, self.low_edge, self.high_edge, self.spread,
+                         self.spread_low, self.spread_high, self.average):
+                item.setVisible(dense)
+            self._history_key = key
 
         recorded = series.last()
         last = current if current is not None else recorded
@@ -85,5 +77,5 @@ class TimePlot(StaticPlot):
         show_line_at(self.mean_line, theory_mean)
         # Ось времени от начала набора статистики: график не бежит, а "схлопывается".
         if last is not None:
-            start = t[0] if len(t) else last[0]
+            start = series.first()[0] if series.first() is not None else last[0]
             self.setXRange(start, max(last[0], start + 1e-3), padding=0)

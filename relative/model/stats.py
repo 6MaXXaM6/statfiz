@@ -2,6 +2,8 @@
 
 import numpy as np
 
+import settings
+
 
 class Histogram:
     """Гистограмма с фиксированными границами + точные среднее и дисперсия.
@@ -134,7 +136,8 @@ class TimeSeries:
     соседние корзины сливаются попарно. Каждый новый отсчёт учитывается.
     """
 
-    def __init__(self, size=4096):
+    def __init__(self, size=None):
+        size = settings.HISTORY_BUCKETS if size is None else size
         if size < 2:
             raise ValueError("нужно хотя бы две корзины")
         self.size = size - size % 2
@@ -145,6 +148,8 @@ class TimeSeries:
         self.span = 1
         self.count = 0
         self._first = self._last = None
+        self._summary_key = None
+        self._summary = None
 
     def add(self, t, v):
         if not self.buckets or self.buckets[-1][5] == self.span:
@@ -168,6 +173,34 @@ class TimeSeries:
                         for a,b in zip(self.buckets[::2], self.buckets[1::2])]
         self.span *= 2
 
+    def summary(self, max_points):
+        """Не более max_points интервалов: крайние значения и взвешенные моменты.
+
+        Соседние корзины объединяются, а не выбрасываются. Поэтому единичный
+        пик и измерения в неполной последней корзине учитываются полностью.
+        """
+        if max_points < 1:
+            raise ValueError("нужен хотя бы один интервал")
+        key = self.count, max_points
+        if key == self._summary_key:
+            return self._summary
+        raw = np.asarray(self.buckets, dtype=float).reshape(-1, 8)
+        if len(raw) <= max_points:
+            result = raw
+        else:
+            group = (len(raw) + max_points - 1) // max_points
+            starts = np.arange(0, len(raw), group)
+            ends = np.r_[starts[1:] - 1, len(raw) - 1]
+            result = np.empty((len(starts), 8))
+            result[:, 0] = raw[starts, 0]
+            result[:, 1] = raw[ends, 1]
+            result[:, 2] = np.minimum.reduceat(raw[:, 2], starts)
+            result[:, 3] = np.maximum.reduceat(raw[:, 3], starts)
+            result[:, 4] = raw[ends, 4]
+            result[:, 5:] = np.add.reduceat(raw[:, 5:], starts, axis=0)
+        self._summary_key, self._summary = key, result
+        return result
+
     def data(self):
         """Представительные точки для совместимости; полная статистика — buckets."""
         if not self.buckets:
@@ -176,6 +209,9 @@ class TimeSeries:
         if points[0][0] != self._first[0]:
             points.insert(0, self._first)
         return tuple(np.asarray(points).T)
+
+    def first(self):
+        return self._first
 
     def last(self):
         return self._last

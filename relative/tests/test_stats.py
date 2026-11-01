@@ -90,3 +90,70 @@ def test_history_compaction_preserves_peaks_and_moments():
     assert np.isclose(b[:, 6].sum(), values.sum())
     assert np.isclose(b[:, 7].sum(), np.square(values).sum())
     assert b[0, 0] == 0 and b[-1, 1] == len(values)-1
+
+
+def test_budgeted_steps_do_not_skip_physics_or_samples(monkeypatch):
+    from types import SimpleNamespace
+    from model import experiment
+    exp = experiment.Experiment(seed=73)
+    exp.configure_gas('pure', 28, 28, 2, 1, collisions=False)
+    clock = [0.]
+    step = exp.gas.step
+
+    def slow_step(dt=None):
+        step(dt)
+        clock[0] += .004
+
+    monkeypatch.setattr(exp.gas, 'step', slow_step)
+    monkeypatch.setattr(experiment, 'time', SimpleNamespace(perf_counter=lambda: clock[0]))
+    dt = exp.gas.dt
+    exp.advance_by(25., seconds=.008)
+    assert exp.steps_since_reset == 2
+    assert np.isclose(exp.gas.time, 2 * dt)
+    assert all(series.count == 2 for series in exp.series.values())
+    assert all(np.isclose(hist.total, exp.hist['pair', 'modulus'].total)
+               for hist in exp.hist.values())
+    exp.advance_for_seconds(.008)
+    assert exp.steps_since_reset == 4
+    assert np.isclose(exp.gas.time, 4 * dt)
+
+
+def test_history_summary_preserves_weights_peaks_and_partial_tail():
+    ts = TimeSeries(size=32)
+    values = np.linspace(-20, 80, 1003)
+    values[17], values[998] = 9000., -6000.
+    times = np.cumsum(np.linspace(.01, .1, len(values)))
+    for t, v in zip(times, values):
+        ts.add(float(t), float(v))
+    for limit in (1, 3, 16, 100):
+        b = ts.summary(limit)
+        assert len(b) <= limit
+        assert b[0, 0] == times[0] and b[-1, 1] == times[-1]
+        assert b[:, 2].min() == values.min() and b[:, 3].max() == values.max()
+        assert b[-1, 4] == values[-1]
+        assert b[:, 5].sum() == len(values)
+        assert np.isclose(b[:, 6].sum(), values.sum())
+        assert np.isclose(b[:, 7].sum(), np.square(values).sum())
+        mean = b[:, 6].sum() / b[:, 5].sum()
+        variance = b[:, 7].sum() / b[:, 5].sum() - mean**2
+        assert np.isclose(mean, values.mean())
+        assert np.isclose(variance, values.var())
+
+
+def test_history_stays_bounded_after_a_million_measurements():
+    import settings
+    ts = TimeSeries()
+    values = np.arange(1000003, dtype=float) % 101 - 50
+    values[999991] = 12345.
+    for t, v in enumerate(values):
+        ts.add(t, float(v))
+    assert len(ts.buckets) <= settings.HISTORY_BUCKETS
+    b = ts.summary(settings.HISTORY_PLOT_POINTS)
+    assert len(b) <= settings.HISTORY_PLOT_POINTS
+    assert ts.count == len(values) and b[:, 5].sum() == len(values)
+    assert b[:, 2].min() == values.min() and b[:, 3].max() == values.max()
+    assert b[:, 6].sum() == values.sum()
+    assert b[:, 7].sum() == np.square(values).sum()
+    assert ts.first() == (0, values[0]) and ts.last() == (len(values)-1, values[-1])
+    ts.reset()
+    assert ts.summary(10).shape == (0, 8)

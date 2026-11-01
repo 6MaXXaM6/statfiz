@@ -8,7 +8,7 @@ from ui import style
 from ui.widgets import Choice, ParamControl, button, hbox, vbox
 import settings
 
-FRAME_MS = settings.FRAME_MS  # ~60 кадров в секунду
+FRAME_MS = settings.FRAME_MS  # 25 кадров/с: меньше нагрузки на слабые ноутбуки
 # После каждого кадра цикл событий хотя бы столько миллисекунд свободен. На Windows обычные
 # таймеры Qt (например, задержка движков) срабатывают, только когда очередь событий пуста;
 # без паузы при долгом кадре (быстрый режим) они не срабатывали бы никогда.
@@ -29,6 +29,7 @@ class RunControls(QtWidgets.QWidget):
     успеем, в медленном — смоделировать factor шагов dt.
     """
 
+    state_changed = QtCore.pyqtSignal(str)
     started = QtCore.pyqtSignal()
     tick = QtCore.pyqtSignal(bool, float)
     mode_changed = QtCore.pyqtSignal(bool)
@@ -88,6 +89,7 @@ class RunControls(QtWidgets.QWidget):
         else:
             self.timer.stop()
         self._update_buttons()
+        self.state_changed.emit(state)
 
     def _update_buttons(self):
         self.btn_start.setEnabled(self.state == STOPPED)
@@ -105,7 +107,7 @@ class RunControls(QtWidgets.QWidget):
 
     def _on_timer(self):
         started = time.perf_counter()
-        self.tick.emit(self.fast, SLOW_FACTORS[self.speed.value() - 1])
+        self.tick.emit(self.fast, SLOW_FACTORS[self.speed.value() - 1] * FRAME_MS / 16.)
         if self.state == RUNNING:
             spent_ms = int((time.perf_counter() - started) * 1000)
             self.timer.start(max(MIN_IDLE_MS, FRAME_MS - spent_ms))

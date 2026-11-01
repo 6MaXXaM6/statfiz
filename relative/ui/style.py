@@ -122,6 +122,8 @@ def init_style(app, size=None):
             font-size: %(big)dpx; font-weight: bold; padding: %(bp)dpx;
             border-width: 1px; border-radius: %(br)dpx;
         }
+        QPushButton#big[primary="true"] { background: #2859a3; color: white; border-color: #2859a3; }
+        QPushButton#big[primary="true"]:hover { background: #1d4786; }
         QSpinBox, QDoubleSpinBox, QComboBox {
             border: 2px solid #8a9bb8; border-radius: %(r)dpx; padding: 2px; background: #ffffff; color: #111111;
         }
@@ -135,7 +137,7 @@ def init_style(app, size=None):
         """
         % dict(
             r=px(0.3), p=px(0.25), p2=px(0.5),
-            big=min(22, px(settings.MENU_BUTTON_FONT)), bp=px(0.35), br=px(0.3),
+            big=max(18, min(26, px(settings.MENU_BUTTON_FONT))), bp=min(10, px(0.45)), br=8,
             gh=px(0.4), gr=px(0.2), hw=px(1.0), hm=px(0.35), hr=px(0.5),
             cb=px(0.9), rc=px(0.4), tb=px(0.2), ob=px(0.9),
             page=PAGE_BG,

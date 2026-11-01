@@ -204,3 +204,25 @@ def test_collision_toggle_and_history_restart_preserve_statistics():
     exp.restart_history()
     assert exp.series[PAIR, tf.MODULUS].count == 0
     assert hist.total == total and hist.mean() == mean
+
+
+def test_mass_overlap_relaxation_matches_sequential_reference():
+    import copy
+    from model.physics import radius_for_mass
+    gas = Gas(100, 0, 28, 4, 300, seed=67)
+    gas.radius = radius_for_mass(np.full(gas.n, 200.))
+    reference = copy.deepcopy(gas)
+    velocity = gas.vel.copy()
+    for _ in range(20):
+        ii, jj = reference.find_close_pairs()
+        for i, j in zip(ii, jj):
+            d = reference.pos[j] - reference.pos[i]
+            dist = np.hypot(d[0], d[1])
+            if dist > 0:
+                reference._push_apart(i, j, d / dist, dist)
+        for axis in (0, 1):
+            np.clip(reference.pos[:, axis], reference.radius,
+                    reference.box - reference.radius, out=reference.pos[:, axis])
+    gas.separate_overlaps(max_rounds=20)
+    np.testing.assert_allclose(gas.pos, reference.pos, rtol=0, atol=1e-10)
+    np.testing.assert_array_equal(gas.vel, velocity)

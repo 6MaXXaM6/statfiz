@@ -142,6 +142,7 @@ class ParamControl(QtWidgets.QWidget):
         super().__init__()
         self.label = label(title)
         self.slider = QtWidgets.QSlider(QtCore.Qt.Horizontal)
+        self.slider.setTracking(False)  # перестраивать опыт после отпускания движка
         self.spin = QtWidgets.QSpinBox()
         self.spin.setMinimumWidth(style.px(3.6))
         self.spin.setAlignment(QtCore.Qt.AlignRight)
@@ -156,7 +157,7 @@ class ParamControl(QtWidgets.QWidget):
 
         self._delay = QtCore.QTimer(self)
         self._delay.setSingleShot(True)
-        self._delay.setInterval(250)
+        self._delay.setInterval(40)
         self._delay.timeout.connect(lambda: self.changed.emit(self.value()))
 
         self.setLayout(vbox(hbox((self.label, 1), self.spin), self.slider,

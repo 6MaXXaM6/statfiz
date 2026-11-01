@@ -305,3 +305,63 @@ def test_fullscreen_round_trip_rescales_layout(app):
     assert not win.isFullScreen()
     assert not problems(win)
     win.close()
+
+
+def test_running_plots_are_throttled_but_pause_refreshes(app, monkeypatch):
+    win = make_fixed_demo(app)
+    d = win.demo
+    calls = []
+    original = d.panels[0].refresh
+    monkeypatch.setattr(d.panels[0], 'refresh', lambda *args: (calls.append(True), original(*args))[-1])
+    d.run.toggle_pause()
+    d.on_tick(False, .05)
+    d.on_tick(False, .05)
+    assert not calls  # статистика записывается, дорогая отрисовка ещё не нужна
+    assert d.exp.steps_since_reset == 2
+    d.run.pause()
+    assert len(calls) == 1
+    assert_display(d, d.panels[0], d.exp.current_value(*d.panels[0].quantity))
+    win.close()
+
+
+def test_parameter_changes_coalesce_and_apply_without_old_delay(app, monkeypatch):
+    from PyQt5.QtTest import QSignalSpy
+    win = make_fixed_demo(app)
+    calls = []
+    changed = QSignalSpy(win.demo.gas.temperature.changed)
+    original = win.demo.exp.set_temperature
+    monkeypatch.setattr(win.demo.exp, 'set_temperature', lambda value: (calls.append(value), original(value))[-1])
+    for value in (350, 375, 400):
+        win.demo.gas.temperature.spin.setValue(value)
+    assert not calls
+    assert changed.wait(1000)
+    assert calls == [400]
+    assert win.demo.exp.temperature == 400
+    win.close()
+
+
+def test_long_history_plot_is_bounded_and_not_rebuilt_on_pause(app, monkeypatch):
+    import settings
+    from model.stats import TimeSeries
+    from ui.plots.time_plot import TimePlot
+    series = TimeSeries()
+    for t in range(20000):
+        series.add(t, 9000. if t == 17777 else float(t % 100))
+    plot = TimePlot()
+    plot.resize(1200, 300)
+    plot.show()
+    app.processEvents()
+    plot.update_view(series)
+    assert len(plot.high_edge.xData) <= settings.HISTORY_PLOT_POINTS
+    assert max(plot.high_edge.yData) == 9000.
+    calls = []
+    update = plot.high_edge.setData
+    monkeypatch.setattr(plot.high_edge, 'setData', lambda *args: (calls.append(True), update(*args))[-1])
+    plot.update_view(series, current=(20000., 250.))
+    assert not calls
+    assert plot.dot.getData()[1][0] == 250.
+    series.add(20001., -500.)
+    plot.update_view(series)
+    assert len(calls) == 1
+    assert min(plot.low_edge.yData) == -500.
+    plot.close()
