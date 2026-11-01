@@ -9,7 +9,7 @@ import settings
 import sys
 
 import pyqtgraph as pg
-from PyQt5 import QtGui
+from PyQt5 import QtCore, QtGui, QtWidgets
 
 # Базовый размер шрифта в пикселях. Пересчитывается в init_style().
 BASE = 20
@@ -67,7 +67,14 @@ def light_palette():
     return palette
 
 
-def init_style(app):
+def base_for_size(width, height):
+    """Логические пиксели Qt уже учитывают масштаб Windows (125%, 150% и т.д.)."""
+    return min(settings.FONT_MAX, max(settings.FONT_MIN, int(round(
+        min(height / settings.LINES_PER_SCREEN,
+            width / settings.COLUMNS_PER_SCREEN) * settings.FONT_SCALE))))
+
+
+def init_style(app, size=None):
     """Подбирает размер шрифта под экран и настраивает Qt и pyqtgraph."""
     global BASE
     screen = app.primaryScreen().availableGeometry()
@@ -75,10 +82,9 @@ def init_style(app):
     # Для снимков экрана в tools/screenshot.py можно задать размер "экрана" вручную.
     if os.environ.get("RELATIVE_SCREEN"):
         width, height = map(int, os.environ["RELATIVE_SCREEN"].split("x"))
-    # ~42 строки текста на высоту экрана: 1080 px -> 26 px, 768 px -> 18 px;
-    # на узких экранах — не больше 1/64 ширины (1024 px -> 16 px).
-    BASE = min(settings.FONT_MAX, max(settings.FONT_MIN, int(round(
-        min(height / settings.LINES_PER_SCREEN, width / settings.COLUMNS_PER_SCREEN) * settings.FONT_SCALE))))
+    if size is not None:
+        width, height = size.width(), size.height()
+    BASE = base_for_size(width, height)
 
     f = app.font()
     f.setPixelSize(BASE)
@@ -114,7 +120,7 @@ def init_style(app):
         QToolButton#overlay:hover { background: #dde6f5; }
         QPushButton#big {
             font-size: %(big)dpx; font-weight: bold; padding: %(bp)dpx;
-            border-width: 3px; border-radius: %(br)dpx;
+            border-width: 1px; border-radius: %(br)dpx;
         }
         QSpinBox, QDoubleSpinBox, QComboBox {
             border: 2px solid #8a9bb8; border-radius: %(r)dpx; padding: 2px; background: #ffffff; color: #111111;
@@ -129,7 +135,7 @@ def init_style(app):
         """
         % dict(
             r=px(0.3), p=px(0.25), p2=px(0.5),
-            big=px(settings.MENU_BUTTON_FONT), bp=px(0.6), br=px(0.5),
+            big=min(22, px(settings.MENU_BUTTON_FONT)), bp=px(0.35), br=px(0.3),
             gh=px(0.4), gr=px(0.2), hw=px(1.0), hm=px(0.35), hr=px(0.5),
             cb=px(0.9), rc=px(0.4), tb=px(0.2), ob=px(0.9),
             page=PAGE_BG,
@@ -149,3 +155,72 @@ def fmt(x, digits=0):
         return "—"
     s = ("{:,.%df}" % digits).format(x).replace(",", " ")
     return s.replace("-", "−")
+
+
+class WindowFontScale(QtCore.QObject):
+    """Меняет относительные шрифты без пересоздания страниц и сброса опыта."""
+
+    def __init__(self, window):
+        super().__init__(window)
+        self.window = window
+        self.base = BASE
+        self.timer = QtCore.QTimer(self)
+        self.timer.setSingleShot(True)
+        self.timer.setInterval(60)
+        self.timer.timeout.connect(self.apply)
+        window.installEventFilter(self)
+
+    def eventFilter(self, watched, event):
+        if event.type() in (QtCore.QEvent.Resize, QtCore.QEvent.Show):
+            self.timer.start()
+        elif event.type() == QtCore.QEvent.Close:
+            self.timer.stop()
+        return super().eventFilter(watched, event)
+
+    def apply(self):
+        target = base_for_size(self.window.width(), self.window.height())
+        if target == self.base:
+            return
+        widgets = [self.window] + self.window.findChildren(QtWidgets.QWidget)
+        requested_size = self.window.size()
+        ratio = target / self.base
+        # Масштабируются и ограничения размеров: иначе увеличенный текст
+        # попадает в старые фиксированные колонки и строки.
+        for widget in widgets[1:]:
+            minimum, maximum = widget.minimumSize(), widget.maximumSize()
+            def scaled(size):
+                return QtCore.QSize(*(round(value * ratio) if value < 16777215 else value
+                                      for value in (size.width(), size.height())))
+            widget.setMinimumSize(scaled(minimum))
+            widget.setMaximumSize(scaled(maximum))
+            icon = widget.iconSize() if isinstance(widget, QtWidgets.QAbstractButton) else None
+            if icon is not None:
+                widget.setIconSize(scaled(icon))
+        for layout in self.window.findChildren(QtWidgets.QLayout):
+            margins = layout.contentsMargins()
+            layout.setContentsMargins(*(round(value * ratio) for value in
+                                        (margins.left(), margins.top(), margins.right(), margins.bottom())))
+            if layout.spacing() >= 0:
+                layout.setSpacing(round(layout.spacing() * ratio))
+        # Запоминаем коэффициенты до смены общего шрифта приложения.
+        for widget in widgets:
+            if not hasattr(widget, '_relative_font'):
+                f = widget.font()
+                size = f.pixelSize() if f.pixelSize() > 0 else QtGui.QFontInfo(f).pixelSize()
+                widget._relative_font = (size / self.base, f)
+        init_style(QtWidgets.QApplication.instance(), self.window.size())
+        self.base = target
+        for widget in widgets:
+            factor, original = widget._relative_font
+            f = QtGui.QFont(original)
+            f.setPixelSize(px(factor))
+            widget.setFont(f)
+        for widget in widgets:
+            if hasattr(widget, 'rescale_fonts'):
+                widget.rescale_fonts()
+        for widget in reversed(widgets):
+            if hasattr(widget, 'rescale_layout'):
+                widget.rescale_layout()
+        self.window.layout().activate()
+        self.window.resize(requested_size)
+        self.window.update()

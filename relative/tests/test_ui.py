@@ -223,3 +223,85 @@ def test_paused_parameter_changes_and_rotation_stay_synchronized(app):
     assert_display(d, panel, np.linalg.norm(d.exp.gas.vel[1]))
     assert d.exp.hist[panel.quantity].total == 0
     win.close()
+
+
+def test_fonts_follow_window_without_resetting_experiment(app):
+    from PyQt5 import QtCore
+    from pages.authors_page import load_authors
+    style.init_style(app, QtCore.QSize(1366, 768))
+    win = MainWindow()
+    win.resize(1366, 768)
+    win.show()
+    win.show_demo()
+    app.processEvents()
+    win.demo.run.timer.stop()
+    gas = win.demo.exp.gas
+    large = win.demo.run.btn_start.font().pixelSize()
+    win.resize(1093, 614)  # 1366x768 при масштабе Windows 125%
+    win.font_scale.apply()
+    app.processEvents()
+    assert win.demo.run.btn_start.font().pixelSize() < large
+    assert win.demo.exp.gas is gas
+    assert win.theory.stack.widget(0).minimumSizeHint().width() <= win.width()
+    assert win.demo.minimumSizeHint().height() <= win.height()
+    win.resize(1366, 768)
+    win.font_scale.apply()
+    assert win.demo.run.btn_start.font().pixelSize() == large
+    assert load_authors()['authors'][1]['name'] == 'Мухтаров Азамат Фарходович'
+    win.close()
+
+
+def test_axis_captions_stay_inside_small_plot(app):
+    from PyQt5 import QtCore
+    from ui.plots.base import StaticPlot
+    style.init_style(app, QtCore.QSize(1093, 614))
+    plot = StaticPlot('f, 10⁻³ с/м', '|v<sub>отн,x</sub>|, м/с')
+    plot.resize(260, 180)
+    plot.setXRange(0, 3000, padding=0)
+    plot.setYRange(-10000, 10000, padding=0)
+    plot.show()
+    for _ in range(3):
+        app.processEvents()
+        plot.grab()
+    visible = plot.mapToScene(plot.viewport().rect()).boundingRect()
+    for name in ('left', 'bottom'):
+        axis = plot.getAxis(name)
+        assert visible.contains(axis.label.sceneBoundingRect()), name
+    plot.close()
+
+
+def test_fullscreen_round_trip_rescales_layout(app):
+    from PyQt5 import QtCore
+    from PyQt5.QtTest import QTest
+    from tools.layout_check import problems
+    style.init_style(app, QtCore.QSize(1093, 614))
+    win = MainWindow()
+    win.show()
+    win.show_demo()
+    win.demo.pause()
+    gas = win.demo.exp.gas
+    for width, height in ((1093, 614), (1920, 1080), (1093, 614), (1366, 768), (1024, 640)):
+        win.resize(width, height)
+        win.font_scale.apply()
+        QTest.qWait(100)
+        assert win.size() == QtCore.QSize(width, height)
+        assert not problems(win)
+        for panel in win.demo.panels:
+            assert panel.stats.height() >= 2 * panel.stats.fontMetrics().lineSpacing()
+        assert win.demo.exp.gas is gas
+    win.demo.zoom_button.click()
+    for width, height in ((1920, 1080), (1093, 614)):
+        win.resize(width, height)
+        win.font_scale.apply()
+        QTest.qWait(100)
+        assert win.size() == QtCore.QSize(width, height)
+        assert not problems(win)
+    QTest.keyClick(win, QtCore.Qt.Key_F11)
+    QTest.qWait(150)
+    assert win.isFullScreen()
+    assert not problems(win)
+    QTest.keyClick(win, QtCore.Qt.Key_F11)
+    QTest.qWait(150)
+    assert not win.isFullScreen()
+    assert not problems(win)
+    win.close()

@@ -32,12 +32,17 @@ class VectorView(StaticPlot):
     def set_sizes(self, preferred, minimum):
         """Желаемая и наименьшая сторона (в базовых шрифтах). Если места мало, компоновка
         сама уменьшит диаграмму до minimum; рисунок остаётся квадратным (оси в одном масштабе)."""
+        self._size_factors = preferred, minimum
         self._preferred = QtCore.QSize(style.px(preferred), style.px(preferred))
         self._minimum = QtCore.QSize(style.px(minimum), style.px(minimum))
         self.setSizePolicy(QtWidgets.QSizePolicy.Maximum, QtWidgets.QSizePolicy.Maximum)
         self.setMinimumSize(self._minimum)
         self.setMaximumSize(self._preferred)
         self.updateGeometry()
+
+    def rescale_layout(self):
+        self.set_sizes(*self._size_factors)
+        self.x_label.setFont(style.font(.8))
 
     def sizeHint(self):
         return self._preferred

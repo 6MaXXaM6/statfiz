@@ -40,15 +40,20 @@ class TitlePage(QtWidgets.QWidget):
         title = label(TITLE, settings.TITLE_FONT, bold=True, center=True, color="#1c3f7a", shrinkable=True)
         title.setMinimumHeight(style.px(6))
         subtitle = label(SUBTITLE, settings.SUBTITLE_FONT, center=True, wrap=True)
-        buttons = vbox(spacing=style.px(0.8))
+        buttons = vbox(spacing=style.px(0.45))
+        self.menu = QtWidgets.QWidget()
+        self.menu.setLayout(buttons)
+        self.rescale_fonts()
         for text, callback in (("Презентация", on_demo), ("Теория по теме", on_theory),
                                ("Авторы", on_authors), ("Выход", on_exit)):
             b = button(text, callback, name="big")
-            b.setMinimumWidth(style.px(16))
-            buttons.addWidget(b, 0, QtCore.Qt.AlignHCenter)
+            buttons.addWidget(b)
         m = style.px(2)
         self.setLayout(vbox(
             hbox(emblem("emblem_left.png"), (title, 1), emblem("emblem_right.png")),
-            subtitle, (None, 1), buttons, (None, 2),
+            subtitle, (None, 1), hbox(None, self.menu, None), (None, 2),
             margins=(m, style.px(1.5), m, style.px(1.5)),
         ))
+
+    def rescale_fonts(self):
+        self.menu.setFixedWidth(min(320, max(220, style.px(18))))

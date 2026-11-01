@@ -28,6 +28,10 @@ class StaticPlot(pg.PlotWidget):
 
     def __init__(self, xlabel="", ylabel="", canvas=False):
         super().__init__()
+        self._canvas = canvas
+        # AxisItem сдвигает крайние подписи на 5 px наружу. Оставляем место
+        # внутри самого PlotWidget, чтобы viewport не срезал буквы и индексы.
+        self.getPlotItem().layout.setContentsMargins(8, 8, 8, 8)
         self.setMenuEnabled(False)
         self.setMouseEnabled(False, False)
         self.hideButtons()
@@ -43,13 +47,39 @@ class StaticPlot(pg.PlotWidget):
             axis.setTextPen("k")
         # Размер осей постоянный: иначе pyqtgraph подгоняет его под подписи делений,
         # и область графика "ездит", когда меняются числа на осях.
-        self.getAxis("left").setWidth(style.px(AXIS_WIDTH))
-        self.getAxis("bottom").setHeight(style.px(AXIS_HEIGHT))
+        self._reserve_axis_space()
         self.set_axis_label("bottom", xlabel)
         self.set_axis_label("left", ylabel)
 
+    def rescale_fonts(self):
+        if self._canvas:
+            return
+        for name in ("bottom", "left"):
+            axis = self.getAxis(name)
+            axis.setStyle(tickFont=style.font(settings.AXIS_NUMBERS_FONT))
+            self.set_axis_label(name, axis.labelText)
+        self._reserve_axis_space()
+        title = self.getPlotItem().titleLabel
+        title.setText(title.text, size="%dpx" % style.px(.9))
+
+    def _reserve_axis_space(self):
+        """Постоянное поле по метрикам шрифта, без подгонки при каждом кадре."""
+        if self._canvas:
+            return
+        metrics = QtGui.QFontMetrics(style.font(settings.AXIS_NUMBERS_FONT))
+        left, bottom = self.getAxis("left"), self.getAxis("bottom")
+        # Полная высота rich text включает нижние индексы и степени.
+        left_label = left.label.boundingRect().height() if left.label.isVisible() else 0
+        bottom_label = bottom.label.boundingRect().height() if bottom.label.isVisible() else 0
+        gap = 8 + style.px(.4)
+        left.setWidth(max(style.px(AXIS_WIDTH),
+                          metrics.horizontalAdvance("−10000") + left_label + gap))
+        bottom.setHeight(max(style.px(AXIS_HEIGHT),
+                             metrics.height() + bottom_label + gap))
+
     def set_axis_label(self, axis, text):
         self.getAxis(axis).setLabel(text, **{"font-size": "%dpx" % style.px(settings.AXIS_LABEL_FONT)})
+        self._reserve_axis_space()
 
     def set_title(self, text, color="k"):
         self.setTitle(text, size="%dpx" % style.px(0.9), color=color)

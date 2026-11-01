@@ -27,6 +27,9 @@ class MainWindow(QtWidgets.QMainWindow):
         self.setWindowTitle("Относительная скорость молекул")
         self.stack = QtWidgets.QStackedWidget()
         self.setCentralWidget(self.stack)
+        # Минимум дочерних страниц пересчитывается после смены масштаба.
+        # Он не должен раздувать окно во время самого перехода F11.
+        self.layout().setSizeConstraint(QtWidgets.QLayout.SetNoConstraint)
 
         self.title = TitlePage(self.show_demo, self.show_theory, self.show_authors, self.close)
         self.demo = DemoPage(self.show_title, self.show_theory)
@@ -34,6 +37,7 @@ class MainWindow(QtWidgets.QMainWindow):
         self.authors = AuthorsPage(self.show_title)
         for page in (self.title, self.demo, self.theory, self.authors):
             self.stack.addWidget(page)
+        self.font_scale = style.WindowFontScale(self)
 
     def show_title(self):
         self.stack.setCurrentWidget(self.title)
@@ -94,7 +98,8 @@ def main():
         # под wine переменные Linux в Windows-программу не передаются.
         os.environ["QT_QPA_PLATFORM"] = "offscreen"
     app = QtWidgets.QApplication(sys.argv)
-    style.init_style(app)
+    windowed = "--window" in sys.argv or "--smoke-test" in sys.argv
+    style.init_style(app, QtCore.QSize(1024, 768) if windowed else None)
     window = MainWindow()
     if "--window" in sys.argv or "--smoke-test" in sys.argv:
         window.resize(1024, 768)

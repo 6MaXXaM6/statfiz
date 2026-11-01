@@ -77,6 +77,10 @@ class FormulaBrowser(QtWidgets.QTextBrowser):
         self.setHtml(markup)
         self.verticalScrollBar().setValue(scroll)
 
+    def rescale_fonts(self):
+        self.document().setDefaultFont(style.font(settings.THEORY_TEXT_FONT))
+        self._render()
+
     def resizeEvent(self, event):
         super().resizeEvent(event)
         self._render()

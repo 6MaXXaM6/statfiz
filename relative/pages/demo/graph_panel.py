@@ -87,6 +87,9 @@ class GraphPanel(QtWidgets.QWidget):
             self.stats.setFixedHeight(2 * self.stats.fontMetrics().lineSpacing() + style.px(0.4))
             self.stats.setAlignment(QtCore.Qt.AlignLeft | QtCore.Qt.AlignTop)
 
+    def rescale_layout(self):
+        self.set_side_stats(self.body.direction() == QtWidgets.QBoxLayout.LeftToRight)
+
     @property
     def quantity(self):
         return QUANTITIES[self.selector.currentIndex()]

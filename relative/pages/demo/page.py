@@ -126,6 +126,15 @@ class DemoPage(QtWidgets.QWidget):
         super().resizeEvent(event)
         self._fit_box()
 
+    def rescale_layout(self):
+        self.right_width = self.right.minimumWidth()
+        self.ratio.setFixedHeight(2 * self.ratio.fontMetrics().lineSpacing() + style.px(.3))
+        side = self.add_button.sizeHint().height()
+        self.zoom_button.setFixedSize(side, side)
+        self.zoom_button.setIcon(zoom_icon(side))
+        self.zoom_button.setIconSize(QtCore.QSize(int(side * .6), int(side * .6)))
+        self._fit_box()
+
     def toggle_graphs_zoom(self):
         """Графики на всю ширину: сосуд и колонка настроек скрываются (расчёт продолжается)."""
         zoomed = self.zoom_button.isChecked()

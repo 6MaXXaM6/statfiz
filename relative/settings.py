@@ -1,9 +1,9 @@
-"""Настройки интерфейса и опыта. Значения согласованы с C++-версией."""
+"""Настройки интерфейса и опыта. Физические параметры согласованы с C++-версией."""
 
-FONT_SCALE = 1.15
-LINES_PER_SCREEN = 42
-COLUMNS_PER_SCREEN = 64
-FONT_MIN = 12
+FONT_SCALE = 1.0
+LINES_PER_SCREEN = 48
+COLUMNS_PER_SCREEN = 80
+FONT_MIN = 11
 FONT_MAX = 46
 MIDDLE_MIN = 24
 SIDE_STATS_WIDTH = 14
@@ -12,7 +12,7 @@ VECTOR_RADIUS = 2.6
 ARROW_LENGTH = 12.0
 TITLE_FONT = 2.1
 SUBTITLE_FONT = 1.2
-MENU_BUTTON_FONT = 1.5
+MENU_BUTTON_FONT = 1.1
 EMBLEM_SIZE = 7.0
 HEADER_FONT = 1.25
 RUN_BUTTON_FONT = 1.0
