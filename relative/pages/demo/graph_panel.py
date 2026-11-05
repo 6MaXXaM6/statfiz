@@ -43,9 +43,8 @@ class GraphPanel(QtWidgets.QWidget):
         self.selector.currentIndexChanged.connect(lambda _i: self.quantity_changed.emit())
         self.value = label(size=settings.VALUE_FONT)
         self.value.setSizePolicy(QtWidgets.QSizePolicy.Ignored, QtWidgets.QSizePolicy.Fixed)
-        header = [self.selector, (self.value, 1)]
-        if closable:
-            header.append(button("✕", self.close_clicked.emit))
+        header = [label("График 2" if closable else "График 1", .85, bold=True),
+                  self.selector, (self.value, 1)]
 
         self.time_plot = TimePlot()
         self.hist_plot = HistPlot(sideways=True)
@@ -60,7 +59,15 @@ class GraphPanel(QtWidgets.QWidget):
         self.body.addLayout(self.plots_row, 1)
         self.body.addWidget(self.stats)
         self.set_side_stats(False)
-        self.setLayout(vbox(hbox(*header, spacing=style.px(0.4)), (self.body, 1), spacing=style.px(0.15)))
+        self.hist_plot.rotate_button.setText("↻ Повернуть")
+        header.append(self.hist_plot.rotate_button)
+        if closable:
+            header.append(button("✕", self.close_clicked.emit))
+        self.header = QtWidgets.QFrame()
+        self.header.setObjectName("plotHeader")
+        self.header.setLayout(hbox(*header, spacing=style.px(.4),
+                                  margins=(style.px(.3), style.px(.2), style.px(.3), style.px(.2))))
+        self.setLayout(vbox(self.header, (self.body, 1), spacing=style.px(.2)))
         self._last_count = 0
         self._hist_args = None
 

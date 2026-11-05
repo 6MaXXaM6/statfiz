@@ -42,7 +42,7 @@ class TimePlot(StaticPlot):
 
     def update_view(self, series, theory_mean=None, current=None):
         bins = min(settings.HISTORY_PLOT_POINTS, max(int(self.getViewBox().width()), 1))
-        key = series, series.count, bins
+        key = series, series.revision, bins
         if key != self._history_key:
             dense = series.span > 1 or len(series.buckets) >= bins
             if dense and series.buckets:
@@ -77,5 +77,7 @@ class TimePlot(StaticPlot):
         show_line_at(self.mean_line, theory_mean)
         # Ось времени от начала набора статистики: график не бежит, а "схлопывается".
         if last is not None:
-            start = series.first()[0] if series.first() is not None else last[0]
+            start = series.start_time() if series.start_time() is not None else last[0]
+            if series.window is not None:
+                start = max(start, last[0] - series.window)
             self.setXRange(start, max(last[0], start + 1e-3), padding=0)

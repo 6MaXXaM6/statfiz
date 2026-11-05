@@ -78,6 +78,7 @@ class StaticPlot(pg.PlotWidget):
                              metrics.height() + bottom_label + gap))
 
     def set_axis_label(self, axis, text):
+        self.getAxis(axis).label.document().setDocumentMargin(0)
         self.getAxis(axis).setLabel(text, **{"font-size": "%dpx" % style.px(settings.AXIS_LABEL_FONT)})
         self._reserve_axis_space()
 

@@ -197,22 +197,29 @@ class Experiment:
     def reset_stats(self):
         self.hist = {}
         self.series = {}
+        self._memory_time = self.memory_time
         for kind in KINDS:
             for obj in OBJECTS:
                 low, high = self.value_range(kind, obj)
                 self.hist[obj, kind] = Histogram(low, high, self.bins)
-                self.series[obj, kind] = TimeSeries()
+                self.series[obj, kind] = TimeSeries(window=self.history_window)
         self.steps_since_reset = 0
-        self._memory_time = self.memory_time
+
+    @property
+    def history_window(self):
+        """Три времени памяти: около 95% веса при неизменных параметрах."""
+        return 3 * self._memory_time
 
     def restart_history(self):
         """Смена скорости показа: новая история времени, прежние гистограммы."""
-        self.series = {key: TimeSeries() for key in self.series}
+        self.series = {key: TimeSeries(window=self.history_window) for key in self.series}
 
     def set_memory(self, collisions):
         """Сколько столкновений помнит статистика; накопленное не сбрасывается."""
         self.memory_collisions = int(collisions)
         self._memory_time = self.memory_time
+        for series in self.series.values():
+            series.set_window(self.history_window)
 
     def set_bins(self, bins):
         """Другое число столбиков; накопленная статистика переносится в новые столбики."""
@@ -226,6 +233,8 @@ class Experiment:
         for (obj, kind), hist in self.hist.items():
             hist.rebin(*self.value_range(kind, obj))
         self._memory_time = self.memory_time
+        for series in self.series.values():
+            series.set_window(self.history_window)
 
     def velocity(self, obj):
         """Вектор скорости молекулы 1, молекулы 2 или относительной скорости v1 - v2."""

@@ -66,7 +66,7 @@ class HistPlot(StaticPlot):
         super().resizeEvent(event)
         # pyqtgraph вызывает resizeEvent ещё до конца __init__, когда кнопки нет.
         button = self.__dict__.get("rotate_button")
-        if button is not None:
+        if button is not None and button.parentWidget() is self:
             place_overlay(button, self)
 
     # --- ориентация: единственное место, где важно, что по какой оси ---

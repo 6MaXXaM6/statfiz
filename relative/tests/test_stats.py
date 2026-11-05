@@ -157,3 +157,50 @@ def test_history_stays_bounded_after_a_million_measurements():
     assert ts.first() == (0, values[0]) and ts.last() == (len(values)-1, values[-1])
     ts.reset()
     assert ts.summary(10).shape == (0, 8)
+
+
+def test_history_window_discards_old_peaks_and_does_not_restore_them():
+    ts = TimeSeries(size=32, window=10.)
+    for t in range(1000):
+        ts.add(float(t), 9000. if t == 100 else float(t % 20))
+    assert ts.count == 1000
+    assert all(bucket[1] >= 989 for bucket in ts.buckets)
+    assert ts.summary(16)[:, 3].max() < 9000.
+    ts.set_window(3.)
+    retained = ts.summary(16).copy()
+    assert all(bucket[1] >= 996 for bucket in ts.buckets)
+    ts.set_window(30.)
+    np.testing.assert_array_equal(ts.summary(16), retained)
+
+
+def test_shrinking_window_starts_fresh_detailed_buckets():
+    ts = TimeSeries(size=16)
+    for t in range(5000):
+        ts.add(t, -100.)
+    ts.set_window(2.)
+    for t in range(5000, 5003):
+        ts.add(t, 5.)
+    b = ts.summary(16)
+    assert b[:, 5].sum() == 3
+    assert b[:, 2].min() == b[:, 3].max() == 5.
+    assert b[0, 0] == 5000 and b[-1, 1] == 5002
+
+
+def test_memory_changes_history_window_without_resetting_histograms():
+    from model.experiment import Experiment
+    exp = Experiment(seed=22)
+    # Заполняем историю дольше будущего окна при памяти в одно столкновение.
+    steps = int(np.ceil(6 * exp.gas.collision_time(exp.i) / exp.gas.dt))
+    exp.advance(steps)
+    moments = {key: (hist.total, hist.mean(), hist.variance(), hist.counts.copy())
+               for key, hist in exp.hist.items()}
+    exp.set_memory(1)
+    for series in exp.series.values():
+        assert np.isclose(series.window, 3 * exp.memory_time)
+        assert series.summary(256)[:, 5].sum() < series.count
+    for key, hist in exp.hist.items():
+        total, mean, variance, counts = moments[key]
+        assert hist.total == total and hist.mean() == mean and hist.variance() == variance
+        np.testing.assert_array_equal(hist.counts, counts)
+    exp.set_temperature(600)
+    assert all(np.isclose(series.window, exp.history_window) for series in exp.series.values())

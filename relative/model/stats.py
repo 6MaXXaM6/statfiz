@@ -134,16 +134,23 @@ class TimeSeries:
 
     Корзина хранит t0, t1, min, max, last, n, sum, sum_sq. При заполнении
     соседние корзины сливаются попарно. Каждый новый отсчёт учитывается.
+    При заданном window остаются только недавние корзины и одна граничная.
+    count — все отсчёты с момента сброса; summary описывает сохранённое окно.
     """
 
-    def __init__(self, size=None):
+    def __init__(self, size=None, window=None):
         size = settings.HISTORY_BUCKETS if size is None else size
         if size < 2:
             raise ValueError("нужно хотя бы две корзины")
+        if window is not None and window <= 0:
+            raise ValueError("окно истории должно быть положительным")
         self.size = size - size % 2
+        self.window = window
+        self.revision = 0
         self.reset()
 
     def reset(self):
+        self.revision += 1
         self.buckets = []
         self.span = 1
         self.count = 0
@@ -152,7 +159,9 @@ class TimeSeries:
         self._summary = None
 
     def add(self, t, v):
-        if not self.buckets or self.buckets[-1][5] == self.span:
+        if self.window is not None:
+            self.discard_before(t - self.window)
+        if not self.buckets or self.buckets[-1][5] >= self.span:
             if len(self.buckets) == self.size:
                 self._merge_pairs()
             self.buckets.append([t, t, v, v, v, 1, v, v*v])
@@ -165,7 +174,44 @@ class TimeSeries:
         if self._first is None:
             self._first = (t, v)
         self.count += 1
+        self.revision += 1
         self._last = (t, v)
+
+    def set_window(self, duration):
+        """Изменить окно истории; ранее удалённые точки не восстанавливаются."""
+        if duration is not None and duration <= 0:
+            raise ValueError("окно истории должно быть положительным")
+        previous = self.window
+        self.window = duration
+        if duration is not None and (previous is None or duration < previous):
+            # Не дописываем новые точки в старую крупную граничную корзину.
+            self.span = 1
+        if duration is not None and self._last is not None:
+            self.discard_before(self._last[0] - duration)
+
+    def discard_before(self, cutoff):
+        """Удалить завершившиеся старые корзины, оставляя граничную целиком."""
+        removed = 0
+        for bucket in self.buckets:
+            if bucket[1] >= cutoff:
+                break
+            removed += 1
+        if not removed:
+            return
+        del self.buckets[:removed]
+        self.revision += 1
+        if self.buckets:
+            first = self.buckets[0]
+            self._first = (first[1], first[4])
+            # После уменьшения памяти новые точки снова пишутся подробнее.
+            if len(self.buckets) < self.size // 4:
+                self.span = max(1, self.span // 2)
+        else:
+            self._first = None
+            self.span = 1
+
+    def start_time(self):
+        return self.buckets[0][0] if self.buckets else None
 
     def _merge_pairs(self):
         self.buckets = [[a[0], b[1], min(a[2],b[2]), max(a[3],b[3]), b[4],
@@ -181,7 +227,7 @@ class TimeSeries:
         """
         if max_points < 1:
             raise ValueError("нужен хотя бы один интервал")
-        key = self.count, max_points
+        key = self.revision, max_points
         if key == self._summary_key:
             return self._summary
         raw = np.asarray(self.buckets, dtype=float).reshape(-1, 8)

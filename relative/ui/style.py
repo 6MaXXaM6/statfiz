@@ -98,6 +98,9 @@ def init_style(app, size=None):
         """
         QMainWindow { background: %(page)s; }
         QWidget { color: #111111; }
+        QWidget#experimentHeader { background: #203b5b; border-radius: %(rc)dpx; }
+        QWidget#experimentHeader QLabel { color: white; }
+        QFrame#plotHeader { background: #edf2f7; border-radius: %(r)dpx; }
         QFrame#card { background: #ffffff; border: 1px solid #d3dae6; border-radius: %(rc)dpx; }
         QLabel#section { color: #1c3f7a; font-weight: bold; }
         QPushButton {
@@ -122,6 +125,8 @@ def init_style(app, size=None):
             font-size: %(big)dpx; font-weight: bold; padding: %(bp)dpx;
             border-width: 1px; border-radius: %(br)dpx;
         }
+        QPushButton#primary { background: #197c78; color: white; border-color: #197c78; }
+        QPushButton#primary:hover { background: #12635f; }
         QPushButton#big[primary="true"] { background: #2859a3; color: white; border-color: #2859a3; }
         QPushButton#big[primary="true"]:hover { background: #1d4786; }
         QSpinBox, QDoubleSpinBox, QComboBox {

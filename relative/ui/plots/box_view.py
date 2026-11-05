@@ -39,6 +39,8 @@ class BoxView(StaticPlot):
         self.arrows = [Arrow(style.MOL1), Arrow(style.MOL2)]
         self.add_all(self.frame, self.gas_a, self.gas_b, self.chosen, *self.arrows)
         self.speed_scale = 1.0
+        self.vector_overlay = None
+        self.vector_caption = None
         self.scene().sigMouseClicked.connect(self._on_click)
         self.setToolTip(self.HINT)
 
@@ -52,6 +54,34 @@ class BoxView(StaticPlot):
         p = self.getViewBox().mapSceneToView(event.scenePos())
         which = 2 if event.button() == QtCore.Qt.RightButton else 1
         self.clicked.emit(p.x(), p.y(), which)
+
+    def attach_vectors(self, vectors, caption):
+        self.vector_overlay = vectors
+        self.vector_caption = caption
+        vectors.setParent(self)
+        caption.setParent(self)
+        caption.setAttribute(QtCore.Qt.WA_TransparentForMouseEvents, True)
+        self.place_vectors()
+
+    def resizeEvent(self, event):
+        super().resizeEvent(event)
+        self.place_vectors()
+
+    def place_vectors(self):
+        if self.__dict__.get("vector_overlay") is None:
+            return
+        margin = style.px(1.2)
+        side = max(60, int(min(self.width(), self.height()) * .4))
+        caption_height = 2 * self.vector_caption.fontMetrics().lineSpacing()
+        bottom = self.height() - margin
+        self.vector_overlay.setGeometry(margin, bottom - side - caption_height, side, side)
+        self.vector_caption.setGeometry(margin, bottom - caption_height, side, caption_height)
+        self.vector_overlay.raise_()
+        self.vector_caption.raise_()
+
+    def vector_pixel_scale(self):
+        nm_per_pixel = max(self.getViewBox().viewPixelSize()[0], 1e-9)
+        return ARROW_LENGTH / self.speed_scale / nm_per_pixel
 
     def update_view(self, exp, obj):
         gas = exp.gas

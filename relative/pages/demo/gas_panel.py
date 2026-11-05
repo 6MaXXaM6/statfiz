@@ -1,4 +1,4 @@
-"""Правая колонка: параметры газа. Настройки смеси видны только в режиме "Смесь"."""
+"""Верхняя строка параметров газа. Настройки B видны только для смеси."""
 
 import settings
 
@@ -8,7 +8,7 @@ from PyQt5 import QtCore, QtWidgets
 
 from model.experiment import GAS_MIX, GAS_PURE
 from ui import style
-from ui.widgets import Choice, ParamControl, card, vbox
+from ui.widgets import Choice, ParamControl, hbox, label
 
 # Параметры газа, при изменении которых газ создаётся заново
 GasParams = namedtuple("GasParams", "gas_mode mass_a mass_b n_total n_b start collisions")
@@ -22,17 +22,17 @@ class GasPanel(QtWidgets.QWidget):
     def __init__(self, exp):
         super().__init__()
         self.gas_mode = Choice(None, [(GAS_PURE, "Один газ"), (GAS_MIX, "Смесь A + B")])
-        self.temperature = ParamControl("Температура T, К", settings.TEMPERATURE_MIN, settings.TEMPERATURE_MAX, exp.temperature)
-        self.n_total = ParamControl("Число молекул N", settings.N_MIN, settings.N_MAX, exp.n_total)
-        self.mass_a = ParamControl("Масса A, а.е.м.", settings.MASS_MIN, settings.MASS_MAX, exp.mass_a)
-        self.mass_b = ParamControl("Масса B, а.е.м.", settings.MASS_MIN, settings.MASS_MAX, exp.mass_b)
-        self.n_b = ParamControl("Молекул B", 1, exp.n_total - 1, exp.n_b_mix)
+        self.temperature = ParamControl("T, К", settings.TEMPERATURE_MIN, settings.TEMPERATURE_MAX, exp.temperature)
+        self.n_total = ParamControl("Частиц N", settings.N_MIN, settings.N_MAX, exp.n_total)
+        self.mass_a = ParamControl("mA, а.е.м.", settings.MASS_MIN, settings.MASS_MAX, exp.mass_a)
+        self.mass_b = ParamControl("mB, а.е.м.", settings.MASS_MIN, settings.MASS_MAX, exp.mass_b)
+        self.n_b = ParamControl("Частиц B", 1, exp.n_total - 1, exp.n_b_mix)
         self.n_b.setToolTip("1 — в газе A одна «чужая» молекула B")
-        self.pair = Choice("Пара молекул", [("AA", "A – A"), ("AB", "A – B"), ("BB", "B – B")])
+        self.pair = Choice(None, [("AA", "A – A"), ("AB", "A – B"), ("BB", "B – B")])
 
-        self.start = Choice("Начальные скорости", [("maxwell", "Максвелл"), ("beam", "Все одинаковые")])
+        self.start = Choice(None, [("maxwell", "Максвелл"), ("beam", "Все одинаковые")])
         self.start.setToolTip("Все молекулы летят в одну сторону. Столкновения устанавливают распределение Максвелла.")
-        self.collisions = QtWidgets.QCheckBox("Столкновения молекул")
+        self.collisions = QtWidgets.QCheckBox("Столкновения")
         self.collisions.setChecked(True)
         self.collisions.setFocusPolicy(QtCore.Qt.NoFocus)
         self.collisions.setToolTip("Без столкновений молекулы проходят сквозь друг друга и отражаются только от стенок.")
@@ -40,7 +40,9 @@ class GasPanel(QtWidgets.QWidget):
         self.collisions.toggled.connect(lambda _: self.gas_changed.emit())
 
         # Настройки смеси показываются только в режиме "Смесь"
-        self.mix_widgets = (self.mass_b, self.n_b, self.pair)
+        self.pair_group = QtWidgets.QWidget()
+        self.pair_group.setLayout(hbox(label("Пара:"), self.pair, spacing=style.px(.3)))
+        self.mix_widgets = (self.mass_b, self.n_b, self.pair_group)
 
         self.gas_mode.changed.connect(lambda _key: self.gas_changed.emit())
         for p in (self.mass_a, self.mass_b, self.n_total, self.n_b):
@@ -49,11 +51,12 @@ class GasPanel(QtWidgets.QWidget):
         self.pair.changed.connect(self.pair_chosen)
         self.temperature.changed.connect(self.temperature_changed)
 
-        self.setFont(style.font(settings.GAS_PANEL_FONT))
-        self.setLayout(vbox(card(
-            self.gas_mode, self.temperature, self.n_total, self.mass_a, *self.mix_widgets,
-            title="Газ", spacing=style.px(0.1),
-        )))
+        self.setFont(style.font(.95))
+        self.setLayout(hbox(
+            label("Газ:"), self.gas_mode, (self.temperature, 1), (self.n_total, 1),
+            (self.mass_a, 1), (self.mass_b, 1), (self.n_b, 1),
+            spacing=style.px(.6), margins=(0, 0, 0, 0),
+        ))
 
     def params(self):
         return GasParams(self.gas_mode.value(), self.mass_a.value(), self.mass_b.value(),

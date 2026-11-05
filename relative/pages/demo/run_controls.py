@@ -14,7 +14,7 @@ FRAME_MS = settings.FRAME_MS  # 25 кадров/с: меньше нагрузк�
 # без паузы при долгом кадре (быстрый режим) они не срабатывали бы никогда.
 MIN_IDLE_MS = settings.MIN_IDLE_MS
 
-# Медленный режим: сколько шагов dt моделируется за кадр при положениях движка 1..10
+# Медленный режим: сколько шагов dt моделируется за кадр при разных положениях движка
 SLOW_FACTORS = settings.SLOW_FACTORS
 
 STOPPED, RUNNING, PAUSED = "stopped", "running", "paused"
@@ -48,16 +48,16 @@ class RunControls(QtWidgets.QWidget):
         self.btn_stop = button("■  Стоп", self.stop, size=settings.RUN_BUTTON_FONT, bold=True)
         self.mode = Choice(None, [("slow", "Медленно"), ("fast", "Быстро")])
         self.mode.changed.connect(self._on_mode)
-        self.speed = ParamControl("Скорость", 1, len(SLOW_FACTORS), settings.START_SPEED, show_number=False)
+        self.speed = ParamControl("Темп", 1, len(SLOW_FACTORS), settings.START_SPEED, show_number=False)
 
-        self.ensemble_box = QtWidgets.QCheckBox("Статистика по всем молекулам")
+        self.ensemble_box = QtWidgets.QCheckBox("По всем молекулам")
         self.ensemble_box.setChecked(settings.START_ENSEMBLE)
         self.ensemble_box.setFocusPolicy(QtCore.Qt.NoFocus)
         self.ensemble_box.setToolTip("Гистограммы по всем молекулам того же сорта; иначе — только по выбранной паре.")
         self.ensemble_box.toggled.connect(self.ensemble_changed)
         self.setLayout(vbox(
             hbox(self.btn_start, self.btn_pause, self.btn_stop),
-            hbox((self.mode, 2), (self.speed, 3)), self.ensemble_box,
+            hbox((self.mode, 2), (self.speed, 3)),
             spacing=style.px(0.2)))
         self._update_buttons()
 

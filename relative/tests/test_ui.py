@@ -365,3 +365,87 @@ def test_long_history_plot_is_bounded_and_not_rebuilt_on_pause(app, monkeypatch)
     assert len(calls) == 1
     assert min(plot.low_edge.yData) == -500.
     plot.close()
+
+
+def test_linked_scales_toggle_keeps_experiment_and_statistics(app):
+    win = MainWindow()
+    win.resize(1093, 614)
+    win.show()
+    win.show_demo()
+    d = win.demo
+    d.pause()
+    d.exp.configure_gas('mix', 200, 1, 150, 50)
+    d.exp.choose_pair('AB')
+    d.exp.advance(20)
+    d.on_experiment_changed()
+    app.processEvents()
+    first, second = d.panels
+    common = first.time_plot.getViewBox().viewRange()[1]
+    np.testing.assert_allclose(common, second.time_plot.getViewBox().viewRange()[1])
+    assert d.link_scales.isChecked()
+    assert first.hist_plot.exponent == second.hist_plot.exponent
+    assert first.hist_plot.top == second.hist_plot.top
+    position = d.exp.gas.pos.copy()
+    counts = {key: hist.counts.copy() for key, hist in d.exp.hist.items()}
+    samples = {key: series.count for key, series in d.exp.series.items()}
+    d.link_scales.click()
+    app.processEvents()
+    assert first.time_plot.getViewBox().viewRange()[1][1] > 10 * second.time_plot.getViewBox().viewRange()[1][1]
+    np.testing.assert_array_equal(d.exp.gas.pos, position)
+    for key, hist in d.exp.hist.items():
+        np.testing.assert_array_equal(hist.counts, counts[key])
+    assert {key: series.count for key, series in d.exp.series.items()} == samples
+    d.link_scales.click()
+    app.processEvents()
+    np.testing.assert_allclose(first.time_plot.getViewBox().viewRange()[1], second.time_plot.getViewBox().viewRange()[1])
+    win.close()
+
+
+def test_vector_construction_uses_vessel_pixel_scale(app):
+    from PyQt5.QtTest import QTest
+    win = MainWindow()
+    win.resize(1093, 614)
+    win.show()
+    win.show_demo()
+    win.demo.pause()
+    QTest.qWait(100)
+    win.demo.refresh()
+    app.processEvents()
+    expected = win.demo.box.vector_pixel_scale()
+    actual = 1. / win.demo.vectors.getViewBox().viewPixelSize()[0]
+    assert np.isclose(actual, expected, rtol=.01)
+    win.close()
+
+
+
+def test_all_gas_sliders_remain_visible_and_change_the_model(app):
+    from PyQt5 import QtCore
+    from PyQt5.QtTest import QSignalSpy, QTest
+    win = MainWindow()
+    win.resize(1093, 614)
+    win.show()
+    win.show_demo()
+    d = win.demo
+    d.pause()
+    d.gas.gas_mode.buttons['mix'].click()
+    app.processEvents()
+    controls = ((d.gas.temperature, 'temperature'), (d.gas.mass_a, 'mass_a'),
+                (d.gas.mass_b, 'mass_b'), (d.gas.n_total, 'n_total'),
+                (d.gas.n_b, 'n_b_mix'))
+    for control, field in controls:
+        assert control.slider.isVisibleTo(win), field
+        assert control.spin.isVisibleTo(win), field
+        previous = getattr(d.exp, field)
+        changed = QSignalSpy(control.changed)
+        QTest.keyClick(control.slider, QtCore.Qt.Key_Right)
+        assert changed.wait(1000), field
+        assert control.value() == previous + 1, field
+        assert getattr(d.exp, field) == control.value(), field
+    d.gas.gas_mode.buttons['pure'].click()
+    app.processEvents()
+    assert d.gas.temperature.slider.isVisibleTo(win)
+    assert d.gas.n_total.slider.isVisibleTo(win)
+    assert d.gas.mass_a.slider.isVisibleTo(win)
+    assert not d.gas.mass_b.slider.isVisibleTo(win)
+    assert not d.gas.n_b.slider.isVisibleTo(win)
+    win.close()

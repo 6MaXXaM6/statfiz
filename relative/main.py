@@ -37,7 +37,7 @@ class MainWindow(QtWidgets.QMainWindow):
         self.layout().setSizeConstraint(QtWidgets.QLayout.SetNoConstraint)
 
         self.title = TitlePage(self.show_demo, self.show_theory, self.show_authors, self.close)
-        self.demo = DemoPage(self.show_title, self.show_theory)
+        self.demo = DemoPage(self.show_title, self.show_theory, self.show_authors)
         self.theory = TheoryPage(self.show_title, self.show_demo)
         self.authors = AuthorsPage(self.show_title)
         for page in (self.title, self.demo, self.theory, self.authors):
