@@ -9,7 +9,7 @@ MIDDLE_MIN = 24
 SIDE_STATS_WIDTH = 14
 CARD_MARGIN = 0.35
 VECTOR_RADIUS = 2.6
-ARROW_LENGTH = 12.0
+ARROW_LENGTH = 8.0  # единый постоянный масштаб стрелок; длина растёт со скоростью
 TITLE_FONT = 2.1
 SUBTITLE_FONT = 1.2
 MENU_BUTTON_FONT = 1.4
@@ -90,3 +90,7 @@ RELAX_SPEED = 11
 AUTOSTART = True
 START_ENSEMBLE = False
 START_TWO_PANELS = True
+
+# Темп показа задаётся относительно 300 К, независимо от текущей температуры.
+ANIMATION_REFERENCE_TEMPERATURE = 300.0
+FAST_FRAME_FACTOR = 25.0  # в 10 раз быстрее стартового темпа; статистика по всем частицам

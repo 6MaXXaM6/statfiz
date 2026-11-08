@@ -4,3 +4,6 @@ relative/build/macos/
 relative/build/smoke-macos.txt
 /build/windows-tools/
 /dist/
+
+# macOS Finder metadata
+.DS_Store

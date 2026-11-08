@@ -14,7 +14,7 @@ FRAME_MS = settings.FRAME_MS  # 25 кадров/с: меньше нагрузк�
 # без паузы при долгом кадре (быстрый режим) они не срабатывали бы никогда.
 MIN_IDLE_MS = settings.MIN_IDLE_MS
 
-# Медленный режим: сколько шагов dt моделируется за кадр при разных положениях движка
+# Обычный режим: темп в единицах шага при опорной температуре, независимо от текущей T.
 SLOW_FACTORS = settings.SLOW_FACTORS
 
 STOPPED, RUNNING, PAUSED = "stopped", "running", "paused"
@@ -25,8 +25,8 @@ class RunControls(QtWidgets.QWidget):
 
     started — нажата "Старт" (нужно начать новый опыт);
     mode_changed(fast) — переключён режим "медленно / быстро";
-    tick(fast, factor) — пора сделать очередной кадр: в быстром режиме считать сколько
-    успеем, в медленном — смоделировать factor шагов dt.
+    tick(fast, factor) — начать очередной кадр; после его расчёта страница вызывает
+    finish_frame(). Длинный кадр может состоять из нескольких коротких порций.
     """
 
     state_changed = QtCore.pyqtSignal(str)
@@ -38,6 +38,7 @@ class RunControls(QtWidgets.QWidget):
     def __init__(self):
         super().__init__()
         self.state = STOPPED
+        self._frame_started = None
         self.timer = QtCore.QTimer(self)
         self.timer.setTimerType(QtCore.Qt.PreciseTimer)
         self.timer.setSingleShot(True)  # следующий кадр планируется после окончания текущего
@@ -106,8 +107,14 @@ class RunControls(QtWidgets.QWidget):
         self.mode_changed.emit(self.fast)
 
     def _on_timer(self):
-        started = time.perf_counter()
+        if self.state != RUNNING:
+            return
+        self._frame_started = time.perf_counter()
         self.tick.emit(self.fast, SLOW_FACTORS[self.speed.value() - 1] * FRAME_MS / 16.)
+
+    def finish_frame(self):
+        """Следующий кадр начинается после завершения текущего, без очереди долгов."""
         if self.state == RUNNING:
-            spent_ms = int((time.perf_counter() - started) * 1000)
+            spent_ms = (int((time.perf_counter() - self._frame_started) * 1000)
+                        if self._frame_started is not None else 0)
             self.timer.start(max(MIN_IDLE_MS, FRAME_MS - spent_ms))

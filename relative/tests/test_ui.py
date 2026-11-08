@@ -412,7 +412,12 @@ def test_vector_construction_uses_vessel_pixel_scale(app):
     win.demo.refresh()
     app.processEvents()
     expected = win.demo.box.vector_pixel_scale()
-    actual = 1. / win.demo.vectors.getViewBox().viewPixelSize()[0]
+    vector = win.demo.vectors
+    # Координаты построения теперь отображаются прямо в общую сцену сосуда.
+    from PyQt5.QtCore import QPointF
+    origin = vector.mapToScene(QPointF(0, 0))
+    tip = vector.mapToScene(QPointF(1, 0))
+    actual = tip.x() - origin.x()
     assert np.isclose(actual, expected, rtol=.01)
     win.close()
 

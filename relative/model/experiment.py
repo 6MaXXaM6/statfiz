@@ -297,6 +297,28 @@ class Experiment:
             if self.ensemble and self.steps_since_reset % ENSEMBLE_EVERY == 0:
                 self._sample_ensemble()
 
+    def frame_duration(self, factor):
+        """Модельное время кадра (пс): темп при фиксированных массах не зависит от T."""
+        reference_dt = self.gas.dt * math.sqrt(self.temperature / settings.ANIMATION_REFERENCE_TEMPERATURE)
+        return factor * reference_dt
+
+    def advance_duration(self, duration, seconds=None):
+        """Рассчитать часть заданного интервала безопасными шагами, вернуть остаток.
+
+        Остаток продолжает тот же кадр после возврата в цикл событий Qt.
+        Пропущенного модельного времени и фиктивных измерений нет.
+        """
+        if duration <= 0:
+            return 0.0
+        n = max(1, int(math.ceil(duration / self.gas.dt)))
+        dt = duration / n
+        deadline = None if seconds is None else time.perf_counter() + seconds
+        for completed in range(1, n + 1):
+            self.advance(1, dt)
+            if deadline is not None and time.perf_counter() >= deadline:
+                return (n - completed) * dt
+        return 0.0
+
     def advance_by(self, factor, seconds=None):
         """Шаги не длиннее dt; с бюджетом — вернуть управление между шагами.
 

@@ -25,7 +25,7 @@ from ui.plots.box_view import BoxView
 from ui.plots.vector_view import VectorView
 from ui.widgets import ParamControl, button, card, hbox, header_bar, label, vbox
 
-FAST_BUDGET = settings.FAST_BUDGET     # быстрый режим: секунд расчёта на один кадр
+FAST_BUDGET = settings.FAST_BUDGET     # секунд расчёта в одной порции кадра
 VECTOR_RADIUS = settings.VECTOR_RADIUS     # радиус векторной диаграммы в единицах наибольшей sqrt(kT/m)
 CLICK_DISTANCE = settings.CLICK_DISTANCE    # на каком расстоянии (нм) от молекулы щелчок её выбирает
 MIDDLE_MIN = settings.MIDDLE_MIN         # наименьшая ширина средней колонки (в базовых шрифтах)
@@ -38,12 +38,16 @@ class DemoPage(QtWidgets.QWidget):
         super().__init__()
         self.exp = Experiment()
         self._last_plot_refresh = 0.
+        self._frame_remaining = None
+        self._frame_timer = QtCore.QTimer(self)
+        self._frame_timer.setSingleShot(True)
+        self._frame_timer.timeout.connect(self._continue_frame)
         self.projection_of = None
 
         # --- части страницы ---
         self.box = BoxView()
         self.run = RunControls()
-        self.vectors = VectorView(embedded=True)
+        self.vectors = VectorView()
         self.legend = label(size=.85, wrap=True)
         self.box.attach_vectors(self.vectors, self.legend)
         self.gas = GasPanel(self.exp)
@@ -122,6 +126,7 @@ class DemoPage(QtWidgets.QWidget):
         self.run.state_changed.connect(self.on_run_state_changed)
         self.run.started.connect(self.on_start)
         self.run.tick.connect(self.on_tick)
+        self.run.speed.changed.connect(lambda _: self._cancel_frame())
         self.run.mode_changed.connect(self.on_mode_changed)
         self.run.ensemble_changed.connect(self.on_ensemble_changed)
         self.box.clicked.connect(self.on_box_clicked)
@@ -229,16 +234,36 @@ class DemoPage(QtWidgets.QWidget):
         self.on_experiment_changed()
 
     def on_tick(self, fast, factor):
-        if fast:
-            self.exp.advance_for_seconds(FAST_BUDGET)
-        else:
-            self.exp.advance_by(factor, seconds=FAST_BUDGET)
+        if self._frame_remaining is None:
+            factor = settings.FAST_FRAME_FACTOR if fast else factor
+            self._frame_remaining = self.exp.frame_duration(factor)
+        self._continue_frame()
+
+    def _continue_frame(self):
+        if self._frame_remaining is None:
+            return
+        self._frame_timer.stop()
+        self._frame_remaining = self.exp.advance_duration(self._frame_remaining, seconds=FAST_BUDGET)
+        if self._frame_remaining > 0 and self.run.state == "running":
+            # Между порциями Qt обрабатывает паузу, ползунки и закрытие окна.
+            self._frame_timer.start(1)
+            return
+        self._frame_remaining = None
         due = time.perf_counter() - self._last_plot_refresh >= settings.PLOT_REFRESH_MS / 1000.
         self.refresh(plots=due or self.run.state != "running")
+        self.run.finish_frame()
+
+    def _cancel_frame(self):
+        pending = self._frame_remaining is not None
+        self._frame_timer.stop()
+        self._frame_remaining = None
+        if pending:
+            self.run.finish_frame()
 
     def on_run_state_changed(self, state):
         if state != "running":
-            self.refresh()  # на паузе все подписи показывают последний рассчитанный шаг
+            self._cancel_frame()
+            self.refresh()  # на паузе показываем последний фактически рассчитанный шаг
 
     def hideEvent(self, event):
         self.run.pause()
@@ -276,6 +301,7 @@ class DemoPage(QtWidgets.QWidget):
 
     def on_experiment_changed(self):
         """Изменились газ, выбор молекул или графики: заново настроить масштабы и подписи."""
+        self._cancel_frame()
         self.gas.sync_with(self.exp)
         self.configure_plots()
         self.refresh()
@@ -299,7 +325,8 @@ class DemoPage(QtWidgets.QWidget):
             low, high = tf.value_range(kind, max(scales))
             panel.configure(exp, low, high, max(tf.peak(kind, s) for s in scales))
 
-        speed_scale = exp.max_speed_scale()
+        # Сохраняем масштаб стрелок при 300 К: нагрев увеличивает их длину.
+        speed_scale = exp.max_speed_scale() * (settings.ANIMATION_REFERENCE_TEMPERATURE / exp.temperature) ** .5
         self.box.configure(exp.gas.box, speed_scale)
         self.vectors.set_radius(VECTOR_RADIUS * speed_scale)
         self.projection_of = next((p.quantity[0] for p in self.panels if p.quantity[1] == tf.PROJECTION), None)

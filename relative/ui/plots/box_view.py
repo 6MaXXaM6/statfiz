@@ -25,6 +25,10 @@ class BoxView(StaticPlot):
 
     def __init__(self):
         super().__init__(canvas=True)
+        # Один непрозрачный viewport стирает весь предыдущий кадр, включая
+        # косметические перья стрелок за границей сосуда (важно при resize/Retina).
+        self.setViewportUpdateMode(QtWidgets.QGraphicsView.FullViewportUpdate)
+        self.setCacheMode(QtWidgets.QGraphicsView.CacheNone)
         self.frame = QtWidgets.QGraphicsRectItem()
         frame_pen = QtGui.QPen(QtGui.QColor("black"))
         frame_pen.setWidth(3)
@@ -58,26 +62,49 @@ class BoxView(StaticPlot):
     def attach_vectors(self, vectors, caption):
         self.vector_overlay = vectors
         self.vector_caption = caption
-        vectors.setParent(self)
+        self.scene().addItem(vectors)
         caption.setParent(self)
         caption.setAttribute(QtCore.Qt.WA_TransparentForMouseEvents, True)
+        self.getViewBox().sigResized.connect(self.place_vectors)
+        self.getViewBox().sigRangeChanged.connect(self.place_vectors)
+        caption.setToolTip("При слишком большой длине стрелки скрываются целиком; "
+                           "скорость частиц и масштаб остальных стрелок не меняются.")
         self.place_vectors()
 
     def resizeEvent(self, event):
         super().resizeEvent(event)
         self.place_vectors()
 
-    def place_vectors(self):
+    def place_vectors(self, *args):
         if self.__dict__.get("vector_overlay") is None:
             return
-        margin = style.px(1.2)
-        side = max(60, int(min(self.width(), self.height()) * .4))
+        # Привязка к настоящему сосуду, а не к полям вокруг квадратного графика.
+        vessel = self.frame.mapRectToScene(self.frame.rect())
+        area = self.mapToScene(self.viewport().rect()).boundingRect().adjusted(8, 8, -8, -8)
+        margin = style.px(.5)
         caption_height = 2 * self.vector_caption.fontMetrics().lineSpacing()
-        bottom = self.height() - margin
-        self.vector_overlay.setGeometry(margin, bottom - side - caption_height, side, side)
-        self.vector_caption.setGeometry(margin, bottom - caption_height, side, caption_height)
-        self.vector_overlay.raise_()
+        x = max(area.left(), vessel.left() + margin)
+        bottom = min(area.bottom(), vessel.bottom() - margin)
+        self.vector_caption.setGeometry(round(x), round(bottom - caption_height),
+                                        max(1, round(area.right() - x)), caption_height)
+        area.setBottom(bottom - caption_height - margin)
+        anchor = QtCore.QPointF(vessel.left() + .22 * vessel.width(),
+                               area.bottom() - .22 * vessel.height())
+        self.vector_overlay.rescale_layout()
+        self.vector_overlay.match_pixel_scale(self.vector_pixel_scale())
+        self.vector_overlay.set_area(area, anchor)
         self.vector_caption.raise_()
+        self._fit_particle_arrows()
+
+    def _fit_particle_arrows(self):
+        # Можно пересечь стенку сосуда, но нельзя показывать обрезанный наконечник
+        # на краю самого холста. Масштаб скорости при этом остаётся постоянным.
+        viewport = self.mapToScene(self.viewport().rect()).boundingRect()
+        pad = max(6., max(arrow.pen().widthF() for arrow in self.arrows) + 2.)
+        area = viewport.intersected(self.getViewBox().sceneBoundingRect()).adjusted(pad, pad, -pad, -pad)
+        for arrow in self.arrows:
+            bounds = arrow.mapRectToScene(arrow.path().boundingRect())
+            arrow.setVisible(not arrow.path().isEmpty() and area.contains(bounds))
 
     def vector_pixel_scale(self):
         nm_per_pixel = max(self.getViewBox().viewPixelSize()[0], 1e-9)
@@ -107,3 +134,4 @@ class BoxView(StaticPlot):
                 arrow.set(gas.pos[k], gas.vel[k] * scale, ARROW_HEAD)
             else:
                 arrow.clear()
+        self._fit_particle_arrows()
