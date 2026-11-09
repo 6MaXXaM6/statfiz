@@ -1,4 +1,5 @@
 """График величины во времени — "схлопывающийся": ось времени от начала опыта до сейчас."""
+# Серые области показывают интервалы накопленной истории; их рисование настраивается в update_view.
 
 import numpy as np
 import pyqtgraph as pg
@@ -7,6 +8,7 @@ import settings
 from ui import style
 from ui.plots.base import StaticPlot, pen, show_line_at
 
+# История выбранной величины; значения подготавливает модель, здесь настраивается их изображение.
 class TimePlot(StaticPlot):
     """Кривая v(t), текущая точка, линия текущего значения и теоретическое среднее.
 
@@ -15,6 +17,7 @@ class TimePlot(StaticPlot):
     участке — выглядит так же, а рисуется во много раз быстрее.
     """
 
+    # Здесь менять подпись «время t, пс», вид текущей точки и линии; цвета серых областей — в settings.py.
     def __init__(self):
         super().__init__(xlabel="время t, пс")
         self._history_key = None
@@ -35,15 +38,18 @@ class TimePlot(StaticPlot):
         self.current = self.line(0, style.HILITE, width=settings.CURRENT_LINE, dashed=True)
         self.mean_line = self.line(0, style.THEORY, width=0.1, dotted=True)
 
+    # Получает вертикальную подпись и диапазон из GraphPanel; горизонтальная подпись задана в конструкторе.
     def configure(self, axis_label, low, high):
         """axis_label — подпись оси значений с единицами, например "|v₁|, м/с"."""
         self.set_axis_label("left", axis_label)
         self.setYRange(low, high, padding=0)
 
+    # Выбирает ломаную или интервальное представление истории и обновляет текущую отметку.
     def update_view(self, series, theory_mean=None, current=None):
         bins = min(settings.HISTORY_PLOT_POINTS, max(int(self.getViewBox().width()), 1))
         key = series, series.revision, bins
         if key != self._history_key:
+            # После уплотнения истории показываются min–max и среднее ± σ; это не следы старых стрелок.
             dense = series.span > 1 or len(series.buckets) >= bins
             if dense and series.buckets:
                 buckets = series.summary(bins)

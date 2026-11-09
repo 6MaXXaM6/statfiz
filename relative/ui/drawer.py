@@ -3,7 +3,9 @@ from PyQt5 import QtCore, QtWidgets
 from ui import style
 
 
+# Выдвижное меню теории; названия разделов приходят из pages/theory_page.py.
 class Drawer(QtWidgets.QFrame):
+    # Фон/затемнение и длительность анимации настраиваются здесь, ширина передаётся из DRAWER_WIDTH.
     def __init__(self, host, content, width=17):
         super().__init__(host)
         self.host, self.top, self.is_open = host, 0, False
@@ -26,18 +28,22 @@ class Drawer(QtWidgets.QFrame):
         self.hide()
         host.installEventFilter(self)
 
+    # Занимает высоту под шапкой и обновляет затемнение при изменении размеров страницы.
     def place(self):
         self.resize(self.width(), max(1, self.host.height() - self.top))
         self.shade.setGeometry(0, self.top, self.host.width(), self.height())
         self.move(0 if self.is_open else -self.width(), self.top)
 
+    # Оставляет верхнюю полосу страницы открытой, начиная меню под её нижним краем.
     def set_top(self, top):
         self.top = top
         self.place()
 
+    # Обработчик кнопки «Разделы»: открыть закрытое меню или закрыть открытое.
     def toggle(self):
         self.close() if self.is_open else self.open()
 
+    # Показывает меню поверх страницы и затемняет остальной экран.
     def open(self):
         if self.is_open:
             return
@@ -50,26 +56,31 @@ class Drawer(QtWidgets.QFrame):
         self.setFocus()
         self._animate(0)
 
+    # Начинает закрытие; окончательное скрытие выполняется после анимации в _finished.
     def close(self):
         self.is_open = False
         self._animate(-self.width())
 
+    # Передвигает панель к координате x; скорость перехода задана setDuration в конструкторе.
     def _animate(self, x):
         self.slide.stop()
         self.slide.setStartValue(self.pos())
         self.slide.setEndValue(QtCore.QPoint(x, self.top))
         self.slide.start()
 
+    # Убирает панель и затемнение, когда закрывающая анимация закончена.
     def _finished(self):
         if not self.is_open:
             self.hide()
             self.shade.hide()
 
+    # Подстраивает меню под новую геометрию родительской страницы.
     def eventFilter(self, watched, event):
         if watched is self.host and event.type() == QtCore.QEvent.Resize:
             self.place()
         return super().eventFilter(watched, event)
 
+    # Esc закрывает меню; прочие клавиши обрабатываются обычным способом Qt.
     def keyPressEvent(self, event):
         if event.key() == QtCore.Qt.Key_Escape:
             self.close()

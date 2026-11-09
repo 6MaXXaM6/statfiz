@@ -14,14 +14,18 @@ from ui.widgets import Choice, ParamControl, hbox, label
 GasParams = namedtuple("GasParams", "gas_mode mass_a mass_b n_total n_b start collisions")
 
 
+# Верхние поля опыта; их подписи меняются здесь, стартовые значения и диапазоны — в settings.py.
 class GasPanel(QtWidgets.QWidget):
     gas_changed = QtCore.pyqtSignal()
     pair_chosen = QtCore.pyqtSignal(str)
     temperature_changed = QtCore.pyqtSignal(int)
 
+    # Создать поля, варианты выбора и подсказки; внутренние ключи Choice сохранять при переименовании.
     def __init__(self, exp):
         super().__init__()
+        # В парах Choice второй элемент — текст кнопки, первый — ключ, используемый логикой программы.
         self.gas_mode = Choice(None, [(GAS_PURE, "Один газ"), (GAS_MIX, "Смесь A + B")])
+        # ParamControl: подпись, минимум, максимум, значение. Температура и массы здесь — параметры презентации.
         self.temperature = ParamControl("T, К", settings.TEMPERATURE_MIN, settings.TEMPERATURE_MAX, exp.temperature)
         self.n_total = ParamControl("Частиц N", settings.N_MIN, settings.N_MAX, exp.n_total)
         self.mass_a = ParamControl("mA, а.е.м.", settings.MASS_MIN, settings.MASS_MAX, exp.mass_a)
@@ -30,6 +34,7 @@ class GasPanel(QtWidgets.QWidget):
         self.n_b.setToolTip("1 — в газе A одна «чужая» молекула B")
         self.pair = Choice(None, [("AA", "A – A"), ("AB", "A – B"), ("BB", "B – B")])
 
+        # Названия начальных условий и пояснение меняются здесь; maxwell/beam — служебные ключи.
         self.start = Choice(None, [("maxwell", "Максвелл"), ("beam", "Все одинаковые")])
         self.start.setToolTip("Все молекулы летят в одну сторону. Столкновения устанавливают распределение Максвелла.")
         self.collisions = QtWidgets.QCheckBox("Столкновения")
@@ -51,6 +56,7 @@ class GasPanel(QtWidgets.QWidget):
         self.pair.changed.connect(self.pair_chosen)
         self.temperature.changed.connect(self.temperature_changed)
 
+        # Реальный шрифт верхней панели задаётся здесь; settings.GAS_PANEL_FONT сейчас не подключён.
         self.setFont(style.font(.95))
         self.setLayout(hbox(
             label("Газ:"), self.gas_mode, (self.temperature, 1), (self.n_total, 1),
@@ -58,10 +64,12 @@ class GasPanel(QtWidgets.QWidget):
             spacing=style.px(.6), margins=(0, 0, 0, 0),
         ))
 
+    # Собрать выбранные настройки для DemoPage.on_gas_changed(); этот метод сам опыт не пересоздаёт.
     def params(self):
         return GasParams(self.gas_mode.value(), self.mass_a.value(), self.mass_b.value(),
                          self.n_total.value(), self.n_b.value(), self.start.value(), self.collisions.isChecked())
 
+    # Согласовать видимость полей B и доступность AA/AB/BB с текущим составом газа.
     def sync_with(self, exp):
         """Показать настройки смеси и доступные пары по текущему составу газа."""
         for w in self.mix_widgets:

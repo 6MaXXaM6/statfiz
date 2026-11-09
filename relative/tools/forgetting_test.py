@@ -1,3 +1,6 @@
+# ИНСТРУМЕНТ ПОДБОРА ПАМЯТИ: не страница программы, запускается отдельно.
+# Обычное начальное значение поля «Память» менять в settings.START_MEMORY.
+
 """
 Статистический тест для выбора коэффициента забывания гистограмм.
 
@@ -31,18 +34,21 @@ from model.stats import Histogram  # noqa: E402
 K_GRID = [30, 50, 100, 200, 300, 500, 1000, 2000]
 
 
+# Ожидаемый вес каждого столбика для сравнения статистики с теорией.
 def theory_probabilities(hist, sigma):
     """Теоретическая вероятность попасть в каждый столбик (модуль скорости, 2D)."""
     cdf = 1 - np.exp(-hist.edges ** 2 / (2 * sigma ** 2))
     return np.diff(cdf)
 
 
+# Численная мера расхождения гистограммы и ожидаемых вероятностей.
 def l1(hist, p_theory):
     if hist.total <= 0:
         return 2.0
     return float(np.abs(hist.counts / hist.total - p_theory).sum())
 
 
+# Сравнить частоту настоящих ударов с оценкой времени столкновения.
 def check_collision_time():
     exp = Experiment(seed=1)
     gas = exp.gas
@@ -57,6 +63,7 @@ def check_collision_time():
           % (measured, predicted, 100 * (predicted / measured - 1)))
 
 
+# Быстро оценить шум статистики при выбранной памяти на упрощённом наборе скоростей.
 def surrogate_l1(k, checks=300, seed=0):
     """L1 для |v_отн| на суррогатной модели; время — в единицах tau_coll."""
     rng = np.random.default_rng(seed)
@@ -81,6 +88,7 @@ def surrogate_l1(k, checks=300, seed=0):
     return np.array(results)
 
 
+# Проверить качество памяти на настоящем газе; этот вариант медленнее.
 def real_l1(k, checks=40):
     """L1 для |v_отн| на настоящей модели газа (медленно — только для малых K)."""
     exp = Experiment(seed=2)
@@ -97,6 +105,7 @@ def real_l1(k, checks=40):
     return np.array(results)
 
 
+# Пройти значения K_GRID и вывести таблицу для выбора START_MEMORY.
 def main():
     check_collision_time()
     print("\n2. Суррогатная модель, |v_отн|, %d столбиков:" % HIST_BINS)

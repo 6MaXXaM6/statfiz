@@ -1,3 +1,6 @@
+# СТАТИСТИКА БЕЗ ИНТЕРФЕЙСА: надписи и цвета менять в ui/plots и pages/demo.
+# Для числа столбиков и памяти сначала смотреть START_BINS/START_MEMORY в settings.py.
+
 """Накопление статистики: гистограммы и временные ряды."""
 
 import numpy as np
@@ -5,6 +8,7 @@ import numpy as np
 import settings
 
 
+# Данные распределения; столбики рисует HistPlot, этот класс хранит веса и моменты.
 class Histogram:
     """Гистограмма с фиксированными границами + точные среднее и дисперсия.
 
@@ -19,16 +23,19 @@ class Histogram:
 
     RENORMALIZE_AT = 1e100
 
+    # Назначить границы/число столбиков и создать пустую статистику.
     def __init__(self, low, high, bins=30):
         self._set_edges(low, high, bins)
         self.reset()
 
+    # Разбить диапазон на одинаковые интервалы для гистограммы.
     def _set_edges(self, low, high, bins):
         self.edges = np.linspace(low, high, bins + 1)
         self.low = float(low)
         self.bins = bins
         self._inv_width = bins / (high - low)
 
+    # Очистить веса, среднее и дисперсию; вызывается при новом наборе.
     def reset(self):
         self._counts = np.zeros(self.bins)
         self._total = 0.0
@@ -36,28 +43,34 @@ class Histogram:
         self._sum_sq = 0.0
         self._gain = 1.0
 
+    # Веса столбиков с учётом постепенного забывания.
     @property
     def counts(self):
         return self._counts / self._gain
 
+    # Суммарный действующий вес, который при забывании не равен числу всех измерений.
     @property
     def total(self):
         return self._total / self._gain
 
+    # Ширина одного интервала для нормирования плотности.
     @property
     def width(self):
         return self.edges[1] - self.edges[0]
 
+    # Координаты центров столбиков для отрисовки.
     @property
     def centers(self):
         return 0.5 * (self.edges[:-1] + self.edges[1:])
 
+    # Применить память к прежним измерениям без обхода каждого столбика.
     def forget(self, factor):
         """Экспоненциальное забывание: вес всех прежних отсчётов умножается на factor < 1."""
         self._gain /= factor
         if self._gain > self.RENORMALIZE_AT:
             self._renormalize()
 
+    # Защитить внутренние веса от переполнения без изменения видимого результата.
     def _renormalize(self):
         g = self._gain
         self._counts /= g
@@ -66,6 +79,7 @@ class Histogram:
         self._sum_sq /= g
         self._gain = 1.0
 
+    # Принять число или массив отсчётов и обновить столбики/моменты.
     def add(self, values, weight=1.0):
         """Добавить одно значение или массив значений (каждое с весом weight)."""
         w = weight * self._gain
@@ -89,6 +103,7 @@ class Histogram:
         self._sum += w * x.sum()
         self._sum_sq += w * np.dot(x, x)
 
+    # Изменить шкалу или число столбиков с переносом прежних весов.
     def rebin(self, low, high, bins=None):
         """Новый диапазон или число столбиков без потери накопленного
         (например, после изменения температуры).
@@ -104,6 +119,7 @@ class Histogram:
         self._set_edges(low, high, bins or self.bins)
         self._counts = np.diff(np.interp(self.edges, old_edges, cumulative))
 
+    # Найти столбик текущего значения, например для оранжевой подсветки.
     def bin_of(self, value):
         """Номер столбика, в который попадает значение (или None, если за пределами)."""
         k = int(np.floor((value - self.low) * self._inv_width))
@@ -111,17 +127,20 @@ class Histogram:
             return k
         return None
 
+    # Высоты столбиков как плотность вероятности, сравнимая с красной теорией.
     def density(self):
         """Экспериментальная плотность вероятности (нормирована на 1)."""
         if self._total == 0:
             return np.zeros(self.bins)
         return self._counts / (self._total * self.width)
 
+    # Экспериментальное среднее в строке под графиком.
     def mean(self):
         if self._total == 0:
             return float("nan")
         return self._sum / self._total
 
+    # Экспериментальная дисперсия; при недостаточном весе интерфейс покажет «—».
     def variance(self):
         if self.total < 1.5:
             return float("nan")
@@ -129,6 +148,7 @@ class Histogram:
         return max(self._sum_sq / self._total - m * m, 0.0)
 
 
+# История величины; серые области рисует TimePlot по сохранённым интервалам.
 class TimeSeries:
     """История в ограниченной памяти без потери пиков и статистики.
 
@@ -138,6 +158,7 @@ class TimeSeries:
     count — все отсчёты с момента сброса; summary описывает сохранённое окно.
     """
 
+    # Лимит памяти берётся из HISTORY_BUCKETS, длительность окна задаёт Experiment.
     def __init__(self, size=None, window=None):
         size = settings.HISTORY_BUCKETS if size is None else size
         if size < 2:
@@ -149,6 +170,7 @@ class TimeSeries:
         self.revision = 0
         self.reset()
 
+    # Начать временную историю с нуля и сбросить кеш её представления.
     def reset(self):
         self.revision += 1
         self.buckets = []
@@ -158,6 +180,7 @@ class TimeSeries:
         self._summary_key = None
         self._summary = None
 
+    # Добавить реальный отсчёт; при заполнении объединить интервалы, сохранив экстремумы.
     def add(self, t, v):
         if self.window is not None:
             self.discard_before(t - self.window)
@@ -177,6 +200,7 @@ class TimeSeries:
         self.revision += 1
         self._last = (t, v)
 
+    # Изменить глубину истории по полю «Память»; удалённые интервалы не восстанавливаются.
     def set_window(self, duration):
         """Изменить окно истории; ранее удалённые точки не восстанавливаются."""
         if duration is not None and duration <= 0:
@@ -189,6 +213,7 @@ class TimeSeries:
         if duration is not None and self._last is not None:
             self.discard_before(self._last[0] - duration)
 
+    # Отсечь устаревшие интервалы, оставив граничный целиком.
     def discard_before(self, cutoff):
         """Удалить завершившиеся старые корзины, оставляя граничную целиком."""
         removed = 0
@@ -210,15 +235,18 @@ class TimeSeries:
             self._first = None
             self.span = 1
 
+    # Левый край сохранившейся истории для оси времени.
     def start_time(self):
         return self.buckets[0][0] if self.buckets else None
 
+    # Уплотнить историю попарным объединением, не выбрасывая пики скорости.
     def _merge_pairs(self):
         self.buckets = [[a[0], b[1], min(a[2],b[2]), max(a[3],b[3]), b[4],
                          a[5]+b[5], a[6]+b[6], a[7]+b[7]]
                         for a,b in zip(self.buckets[::2], self.buckets[1::2])]
         self.span *= 2
 
+    # Подготовить min/max, среднее и разброс для серых областей графика.
     def summary(self, max_points):
         """Не более max_points интервалов: крайние значения и взвешенные моменты.
 
@@ -247,6 +275,7 @@ class TimeSeries:
         self._summary_key, self._summary = key, result
         return result
 
+    # Вернуть представительные точки истории; плотную историю график показывает через summary().
     def data(self):
         """Представительные точки для совместимости; полная статистика — buckets."""
         if not self.buckets:
@@ -256,8 +285,10 @@ class TimeSeries:
             points.insert(0, self._first)
         return tuple(np.asarray(points).T)
 
+    # Первый представительный отсчёт сохранившейся истории.
     def first(self):
         return self._first
 
+    # Последний измеренный отсчёт для текущей точки и хвоста графика.
     def last(self):
         return self._last

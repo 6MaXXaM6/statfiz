@@ -1,4 +1,5 @@
 """Векторная диаграмма в общей графической сцене сосуда."""
+# Текст цветной формулы под построением находится в pages/demo/readouts.py, сами обозначения — в ui/labels.py.
 
 import pyqtgraph as pg
 from PyQt5 import QtCore, QtGui, QtWidgets
@@ -9,9 +10,11 @@ from ui.plots.base import Arrow
 HEAD = 0.12  # наконечник стрелки в долях характерной скорости
 
 
+# Дополнительная диаграмма v1, v2 и vотн; рисуется на общем холсте без отдельного маленького окна.
 class VectorView(QtWidgets.QGraphicsObject):
     """Общий масштаб v1, v2 и v1 − v2; отдельного обрезающего viewport нет."""
 
+    # Здесь задаются толщины отдельных стрелок, серые оси и надпись x; цвета скоростей — в settings.py.
     def __init__(self):
         super().__init__()
         self.setZValue(20)
@@ -36,29 +39,36 @@ class VectorView(QtWidgets.QGraphicsObject):
             axis.setPen(pg.mkPen("#bbbbbb", width=1))
         self.rescale_layout()
 
+    # Сообщает Qt границы всех дочерних элементов для корректного обновления сцены.
     def boundingRect(self):
         return self.childrenBoundingRect()
 
+    # Сама группа не рисует фон: частицы под построением остаются видны.
     def paint(self, painter, option, widget=None):
         pass  # Рисуют дочерние элементы; фон — общий с сосудом.
 
+    # Размер надписи x задаётся коэффициентом .8 относительно базового шрифта.
     def rescale_layout(self):
         self.x_label.setFont(style.font(.8))
 
+    # Характерная скорость определяет длину наконечников и протяжённость вспомогательных осей.
     def set_radius(self, radius):
         self.radius = radius
 
+    # Получает от BoxView доступную область и предпочитаемый якорь построения.
     def set_area(self, area, anchor):
         """Допустим весь холст, в том числе поля за чёрной границей сосуда."""
         self._area = QtCore.QRectF(area)
         self._anchor = QtCore.QPointF(anchor)
         self._place()
 
+    # Сохраняет общий масштаб с сосудом; не нормирует каждый вектор по отдельности.
     def match_pixel_scale(self, pixels_per_velocity):
         if pixels_per_velocity > 0:
             self._pixels_per_velocity = pixels_per_velocity
             self._place()
 
+    # Сдвигает построение целиком; если оно больше холста, временно скрывает все его стрелки.
     def _place(self):
         self.prepareGeometryChange()
         scale = self._pixels_per_velocity
@@ -92,6 +102,7 @@ class VectorView(QtWidgets.QGraphicsObject):
         for item in (*self.axes, self.x_label):
             item.setVisible(self.fits and self._projection)
 
+    # Строит разность от конца v2 к концу v1; projection_of выбирает дополнительную проекцию.
     def update_view(self, exp, projection_of=None):
         self.prepareGeometryChange()
         self._projection = projection_of is not None
@@ -99,6 +110,7 @@ class VectorView(QtWidgets.QGraphicsObject):
         v1, v2 = exp.gas.vel[exp.i], exp.gas.vel[exp.j]
         self.v1.set((0., 0.), v1, head)
         self.v2.set((0., 0.), v2, head)
+        # Чёрный вектор соединяет концы синего и красного: это геометрическое построение vотн = v1 − v2.
         self.rel.set(v2, v1 - v2, head)
         if projection_of is None:
             self.proj.clear()

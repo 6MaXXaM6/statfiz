@@ -1,3 +1,7 @@
+# КАРТА: pages/title_page.py — главная; pages/demo/page.py — опыт;
+# pages/theory_page.py — теория; pages/authors_page.py — авторы.
+# Для живых правок запускать исходники и перезапускать приложение после сохранения.
+
 """
 Презентация "Относительная скорость движения молекул идеального газа".
 Запуск: python main.py   (F11 — полный экран / окно, Esc — выйти из полного экрана)
@@ -26,7 +30,9 @@ from pages.theory_page import TheoryPage  # noqa: E402
 from pages.title_page import TitlePage  # noqa: E402
 
 
+# Общее окно: держит четыре страницы и передаёт им команды перехода.
 class MainWindow(QtWidgets.QMainWindow):
+    # Здесь менять заголовок системного окна и состав основных страниц.
     def __init__(self):
         super().__init__()
         self.setWindowTitle("Относительная скорость молекул")
@@ -44,19 +50,24 @@ class MainWindow(QtWidgets.QMainWindow):
             self.stack.addWidget(page)
         self.font_scale = style.WindowFontScale(self)
 
+    # Вернуть уже созданную главную страницу, не перечитывая исходники.
     def show_title(self):
         self.stack.setCurrentWidget(self.title)
 
+    # Открыть экран опыта; автозапуск на первом входе описан в DemoPage.showEvent().
     def show_demo(self):
         self.stack.setCurrentWidget(self.demo)
 
+    # Поставить опыт на паузу и показать страницу теории.
     def show_theory(self):
         self.demo.pause()
         self.stack.setCurrentWidget(self.theory)
 
+    # Показать карточки авторов; данные читаются при создании AuthorsPage.
     def show_authors(self):
         self.stack.setCurrentWidget(self.authors)
 
+    # Здесь менять горячие клавиши F11/Esc; тексты кнопок находятся в файлах страниц.
     def keyPressEvent(self, event):
         if event.key() == QtCore.Qt.Key_F11:
             if self.isFullScreen():
@@ -69,10 +80,12 @@ class MainWindow(QtWidgets.QMainWindow):
             super().keyPressEvent(event)
 
 
+# Служебный запуск собранной программы: пройти страницы и записать результат проверки.
 def smoke_test(app, window, report_path):
     """Проверка собранной программы: открыть все страницы, посчитать несколько секунд
     в быстром режиме с двумя графиками (второй — энергия молекулы) и записать результат
     в файл report_path."""
+    # Завершить проверку и записать OK, только если расчёт действительно дал столкновения.
     def finish():
         demo = window.demo
         ok = demo.exp.gas.collisions > 0 and all(p.quantity for p in demo.panels)
@@ -80,6 +93,7 @@ def smoke_test(app, window, report_path):
             f.write("OK collisions=%d panels=%d\n" % (demo.exp.gas.collisions, len(demo.panels)) if ok else "FAIL\n")
         app.quit()
 
+    # Сценарий проверки: страницы, два графика, быстрый режим и новый опыт.
     def start():
         window.show_theory()
         for index in range(window.theory.stack.count()):
@@ -97,6 +111,7 @@ def smoke_test(app, window, report_path):
     QtCore.QTimer.singleShot(500, start)
 
 
+# Точка входа: --window открывает обычное окно, без него — полный экран.
 def main():
     if "--smoke-test" in sys.argv:
         # Проверка идёт без окна на экране. Задаём это здесь, а не переменной окружения:

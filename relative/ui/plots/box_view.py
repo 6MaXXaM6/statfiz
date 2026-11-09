@@ -1,4 +1,5 @@
 """Сосуд с молекулами."""
+# Короткие правки стрелок: settings.ARROW_LENGTH/ARROW_HEAD; размещение диаграммы — place_vectors.
 
 import settings
 
@@ -13,16 +14,19 @@ ARROW_LENGTH = settings.ARROW_LENGTH  # длина стрелки (нм) для 
 ARROW_HEAD = settings.ARROW_HEAD     # наконечник стрелки, нм
 
 
+# Левая область презентации: сосуд, молекулы, их скорости и общее построение.
 class BoxView(StaticPlot):
     """Молекулы газов A и B; выбранные молекулы выделены цветом и стрелками скоростей.
 
     Щелчок левой кнопкой мыши — сигнал clicked(x, y, 1), правой — clicked(x, y, 2).
     """
 
+    # Всплывающая подсказка к сосуду: здесь можно уточнить способ выбора молекул.
     HINT = "Щелчок по молекуле: левая кнопка — молекула 1, правая — молекула 2"
 
     clicked = QtCore.pyqtSignal(float, float, int)
 
+    # Цвет/толщина рамки задаются frame_pen; цвета частиц и скоростей приходят из settings через style.
     def __init__(self):
         super().__init__(canvas=True)
         # Один непрозрачный viewport стирает весь предыдущий кадр, включая
@@ -48,17 +52,20 @@ class BoxView(StaticPlot):
         self.scene().sigMouseClicked.connect(self._on_click)
         self.setToolTip(self.HINT)
 
+    # Размер модели приходит из BOX_SIZE; видимый размер области меняется компоновкой DemoPage._fit_box.
     def configure(self, box_size, speed_scale):
         """speed_scale — характерная скорость (м/с), которой соответствует стрелка ARROW_LENGTH нм."""
         self.frame.setRect(0, 0, box_size, box_size)
         self.setRange(xRange=(0, box_size), yRange=(0, box_size), padding=0.01)
         self.speed_scale = speed_scale
 
+    # Переводит щелчок в координаты модели и различает выбор первой/второй молекулы.
     def _on_click(self, event):
         p = self.getViewBox().mapSceneToView(event.scenePos())
         which = 2 if event.button() == QtCore.Qt.RightButton else 1
         self.clicked.emit(p.x(), p.y(), which)
 
+    # Подключает построение к общей сцене; caption — цветная формула из readouts.vector_legend.
     def attach_vectors(self, vectors, caption):
         self.vector_overlay = vectors
         self.vector_caption = caption
@@ -71,10 +78,12 @@ class BoxView(StaticPlot):
                            "скорость частиц и масштаб остальных стрелок не меняются.")
         self.place_vectors()
 
+    # При изменении размеров окна заново размещает построение и его подпись.
     def resizeEvent(self, event):
         super().resizeEvent(event)
         self.place_vectors()
 
+    # Здесь менять отступы и доли .22 для предпочитаемого положения построения; подпись ставится у низа сосуда.
     def place_vectors(self, *args):
         if self.__dict__.get("vector_overlay") is None:
             return
@@ -96,6 +105,7 @@ class BoxView(StaticPlot):
         self.vector_caption.raise_()
         self._fit_particle_arrows()
 
+    # Проверяет весь контур: стрелка за чёрной стенкой допустима, обрезанная краем холста — скрывается.
     def _fit_particle_arrows(self):
         # Можно пересечь стенку сосуда, но нельзя показывать обрезанный наконечник
         # на краю самого холста. Масштаб скорости при этом остаётся постоянным.
@@ -106,10 +116,12 @@ class BoxView(StaticPlot):
             bounds = arrow.mapRectToScene(arrow.path().boundingRect())
             arrow.setVisible(not arrow.path().isEmpty() and area.contains(bounds))
 
+    # Одна и та же скорость должна иметь одинаковую экранную длину у частицы и в построении.
     def vector_pixel_scale(self):
         nm_per_pixel = max(self.getViewBox().viewPixelSize()[0], 1e-9)
         return ARROW_LENGTH / self.speed_scale / nm_per_pixel
 
+    # Обновляет изображение из готовых данных опыта; размер size меняет рисунок кружка, не физический радиус.
     def update_view(self, exp, obj):
         gas = exp.gas
         is_a = gas.species == 0
@@ -121,6 +133,7 @@ class BoxView(StaticPlot):
 
         chosen = [exp.i, exp.j] if obj == PAIR else [exp.i]
         colors = [style.MOL1, style.MOL2][:len(chosen)]
+        # Выделение выбранных частиц: прибавка .6 увеличивает кружок, белый pen задаёт обводку.
         self.chosen.setData(
             pos=gas.pos[chosen],
             size=[(2 * gas.radius[k] + 0.6) * px_per_nm for k in chosen],

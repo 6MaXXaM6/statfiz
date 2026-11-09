@@ -1,4 +1,5 @@
 """Общая основа всех графиков презентации."""
+# Общие параметры осей и формы стрелок; конкретные графики находятся в соседних файлах plots.
 
 import settings
 
@@ -9,6 +10,7 @@ from PyQt5 import QtCore, QtGui, QtWidgets
 from ui import style
 
 
+# Общий вид линии: цвет, толщина и пунктир; отдельные графики передают свои параметры.
 def pen(color, width=0.12, dashed=False, dotted=False):
     """Перо для линий; width — в долях базового шрифта (линии толще на больших экранах)."""
     line = QtCore.Qt.DashLine if dashed else QtCore.Qt.DotLine if dotted else QtCore.Qt.SolidLine
@@ -19,6 +21,7 @@ AXIS_WIDTH = settings.AXIS_WIDTH   # ширина левой оси (подпи�
 AXIS_HEIGHT = settings.AXIS_HEIGHT  # высота нижней оси (числа + подпись)
 
 
+# Общая основа графиков; изменения осей здесь отражаются на нескольких страницах.
 class StaticPlot(pg.PlotWidget):
     """График без управления мышью, с крупными подписями.
 
@@ -26,6 +29,7 @@ class StaticPlot(pg.PlotWidget):
     (для сосуда с молекулами и векторной диаграммы).
     """
 
+    # xlabel/ylabel — подписи осей; canvas=True делает холст без осей для сосуда.
     def __init__(self, xlabel="", ylabel="", canvas=False):
         super().__init__()
         self._canvas = canvas
@@ -51,6 +55,7 @@ class StaticPlot(pg.PlotWidget):
         self.set_axis_label("bottom", xlabel)
         self.set_axis_label("left", ylabel)
 
+    # Обновляет шрифт делений и подписей после изменения размера окна.
     def rescale_fonts(self):
         if self._canvas:
             return
@@ -62,6 +67,7 @@ class StaticPlot(pg.PlotWidget):
         title = self.getPlotItem().titleLabel
         title.setText(title.text, size="%dpx" % style.px(.9))
 
+    # Если подписи обрезаются, проверять выделенную ширину/высоту осей и эти отступы.
     def _reserve_axis_space(self):
         """Постоянное поле по метрикам шрифта, без подгонки при каждом кадре."""
         if self._canvas:
@@ -77,25 +83,30 @@ class StaticPlot(pg.PlotWidget):
         bottom.setHeight(max(style.px(AXIS_HEIGHT),
                              metrics.height() + bottom_label + gap))
 
+    # Назначает подпись оси; сами слова/обозначения обычно приходят из ui/labels.py.
     def set_axis_label(self, axis, text):
         self.getAxis(axis).label.document().setDocumentMargin(0)
         self.getAxis(axis).setLabel(text, **{"font-size": "%dpx" % style.px(settings.AXIS_LABEL_FONT)})
         self._reserve_axis_space()
 
+    # Общий способ задать заголовок графика и его цвет.
     def set_title(self, text, color="k"):
         self.setTitle(text, size="%dpx" % style.px(0.9), color=color)
 
+    # Создаёт отметку значения: angle=0 — горизонтальная линия, 90 — вертикальная.
     def line(self, angle, color, width=0.12, dashed=False, dotted=False):
         """Бесконечная прямая: angle=0 — горизонтальная, 90 — вертикальная."""
         item = pg.InfiniteLine(angle=angle, pen=pen(color, width, dashed, dotted))
         self.addItem(item)
         return item
 
+    # Добавляет готовые графические элементы на холст в одном месте.
     def add_all(self, *items):
         for item in items:
             self.addItem(item)
 
 
+# Показывает линию текущего/среднего значения либо скрывает её, если числа ещё нет.
 def show_line_at(line, value):
     """Поставить прямую в value или спрятать, если значения нет."""
     if value is None or not np.isfinite(value):
@@ -105,9 +116,11 @@ def show_line_at(line, value):
         line.show()
 
 
+# Общая форма стрелок скоростей; для обычного изменения длины использовать ARROW_LENGTH в settings.py.
 class Arrow(QtWidgets.QGraphicsPathItem):
     """Стрелка-вектор в координатах графика (оси с одинаковым масштабом)."""
 
+    # Цвет и толщина линии задаются здесь; перо сохраняет толщину в экранных пикселях.
     def __init__(self, color, width=0.22):
         super().__init__()
         p = QtGui.QPen(QtGui.QColor(color))
@@ -119,6 +132,7 @@ class Arrow(QtWidgets.QGraphicsPathItem):
         self.setBrush(QtGui.QBrush(QtGui.QColor(color)))
         self.setZValue(10)
 
+    # Строит новый контур стрелки; коэффициент half определяет ширину наконечника, не длину скорости.
     def set(self, start, vector, head):
         """Стрелка из точки start вдоль vector; head — длина наконечника в единицах графика."""
         x0, y0 = start
@@ -141,5 +155,6 @@ class Arrow(QtWidgets.QGraphicsPathItem):
             path.closeSubpath()
         self.setPath(path)
 
+    # Полностью убирает контур, когда соответствующую стрелку не требуется показывать.
     def clear(self):
         self.setPath(QtGui.QPainterPath())

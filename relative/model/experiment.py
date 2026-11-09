@@ -1,3 +1,6 @@
+# СВЯЗЬ ЭКРАНА И МОДЕЛИ: DemoPage вызывает эти методы при действиях пользователя.
+# Оформление надписей — pages/demo/readouts.py и graph_panel.py; формулы теории — model/theory.py.
+
 """
 Эксперимент: газ + выбранные молекулы + накопленная статистика.
 Здесь нет ничего про интерфейс — только логика, которую показывает страница демонстрации.
@@ -40,7 +43,9 @@ MEMORY_COLLISIONS = settings.START_MEMORY
 MEMORY_RANGE = (settings.MEMORY_MIN, settings.MEMORY_MAX)  # сколько столкновений памяти можно выбрать в настройках
 
 
+# Опыт целиком: газ, выбранная пара, параметры и накопленные измерения.
 class Experiment:
+    # Стартовые T/N/массы берутся из settings; тип газа, начальных скоростей и пары заданы здесь.
     def __init__(self, seed=None):
         self.rng = np.random.default_rng(seed)
         # Параметры, которые меняет пользователь
@@ -61,11 +66,13 @@ class Experiment:
     # ------------------------------------------------------------------
     # Состав газа и выбор молекул
     # ------------------------------------------------------------------
+    # Число B: ноль для одного газа, от 1 до N−1 для смеси.
     def n_b(self):
         if self.gas_mode == GAS_PURE:
             return 0
         return int(min(max(self.n_b_mix, 1), self.n_total - 1))
 
+    # Применить поля GasPanel; число/состав/начальные скорости могут начать новый опыт.
     def configure_gas(self, gas_mode, mass_a, mass_b, n_total, n_b, start="maxwell", collisions=True):
         """Новые параметры газа.
 
@@ -87,6 +94,7 @@ class Experiment:
         self.n_b_mix = n_b
         self.rebuild()
 
+    # Менять массы в существующем опыте и согласовывать шкалы/память статистики.
     def set_masses(self, mass_a, mass_b):
         """Изменить массы, не начиная опыт заново: статистика не сбрасывается,
         старые отсчёты постепенно забываются, и видно, как газ приходит к новому равновесию."""
@@ -95,6 +103,7 @@ class Experiment:
         self.gas.set_masses(mass_a, mass_b)
         self._rescale_stats()
 
+    # Создать новый газ и заново выбрать пару; сюда приходит кнопка Старт.
     def rebuild(self):
         """Создаёт газ заново с текущими параметрами."""
         n_total = int(min(max(self.n_total, 2), MAX_PARTICLES))
@@ -106,6 +115,7 @@ class Experiment:
             self.pair_type = self.available_pair_types()[0]
         self.choose_pair(self.pair_type)
 
+    # Разрешить кнопки A–A/A–B/B–B только при достаточном числе частиц каждого сорта.
     def available_pair_types(self):
         n_a, n_b = self.gas.n_a, self.gas.n_b
         types = []
@@ -117,6 +127,7 @@ class Experiment:
             types.append("BB")
         return types
 
+    # Выбрать тип пары и начать статистику выбранной пары заново.
     def choose_pair(self, pair_type):
         """Выбирает пару молекул нужных сортов (первые по списку)."""
         a = self.gas.indices_of(0)
@@ -130,6 +141,7 @@ class Experiment:
         self.pair_type = pair_type
         self.reset_stats()
 
+    # Назначить первую/вторую молекулу по щелчку, не выбирая одну и ту же дважды.
     def select(self, index, which):
         """Пользователь щёлкнул по молекуле: which = 1 или 2."""
         if which == 1:
@@ -144,6 +156,7 @@ class Experiment:
         self.pair_type = "".join(sorted(names[self.gas.species[self.i]] + names[self.gas.species[self.j]]))
         self.reset_stats()
 
+    # Нагреть/охладить газ и перестроить шкалы без сброса накопленной гистограммы.
     def set_temperature(self, temperature):
         """Изменить температуру, не сбрасывая статистику (как и для масс)."""
         self.temperature = temperature
@@ -153,39 +166,48 @@ class Experiment:
     # ------------------------------------------------------------------
     # Теория для выбранных молекул
     # ------------------------------------------------------------------
+    # Масса частицы, выделенной как первая.
     @property
     def mass_1(self):
         return float(self.gas.mass[self.i])
 
+    # Масса частицы, выделенной как вторая.
     @property
     def mass_2(self):
         return float(self.gas.mass[self.j])
 
+    # Приведённая масса выбранной пары для теории относительного движения.
     @property
     def reduced_mass(self):
         return tf.reduced_mass(self.mass_1, self.mass_2)
 
+    # Выбрать массу по объекту наблюдения: первая, вторая или пара.
     def mass(self, obj):
         """Масса, которая входит в распределение: m1, m2 или приведённая масса пары."""
         return {SINGLE: self.mass_1, SECOND: self.mass_2, PAIR: self.reduced_mass}[obj]
 
+    # Масштаб распределения скорости наблюдаемого объекта.
     def sigma(self, obj):
         """sqrt(kT/m) для молекулы или sqrt(kT/mu) для пары, м/с."""
         return tf.sigma_for(self.mass(obj), self.temperature)
 
+    # Масштаб теории: для энергии и скорости используются разные единицы.
     def scale(self, obj, kind):
         """Масштаб распределения: sqrt(kT/m) для скоростей, kT для энергии (в ENERGY_UNIT)."""
         if kind == tf.ENERGY:
             return K_B * self.temperature / ENERGY_UNIT
         return self.sigma(obj)
 
+    # Передать графику рекомендуемый диапазон для выбранной величины.
     def value_range(self, kind, obj):
         return tf.value_range(kind, self.scale(obj, kind))
 
+    # Наибольший масштаб из трёх скоростей; DemoPage отдельно фиксирует опорную T стрелок.
     def max_speed_scale(self):
         """Наибольшее из sqrt(kT/m) для векторов v1, v2 и v_отн на диаграмме."""
         return max(self.sigma(obj) for obj in OBJECTS)
 
+    # Перевести поле «Память» из числа столкновений в модельное время, пс.
     @property
     def memory_time(self):
         """Время (пс), за которое вес старых отсчётов уменьшается в e раз."""
@@ -194,6 +216,7 @@ class Experiment:
     # ------------------------------------------------------------------
     # Статистика
     # ------------------------------------------------------------------
+    # Очистить все гистограммы и временные истории выбранного опыта.
     def reset_stats(self):
         self.hist = {}
         self.series = {}
@@ -205,15 +228,18 @@ class Experiment:
                 self.series[obj, kind] = TimeSeries(window=self.history_window)
         self.steps_since_reset = 0
 
+    # Длительность видимой истории; коэффициент 3 соответствует тексту подсказки о 3τ.
     @property
     def history_window(self):
         """Три времени памяти: около 95% веса при неизменных параметрах."""
         return 3 * self._memory_time
 
+    # При смене темпа начать график времени заново, оставив гистограммы.
     def restart_history(self):
         """Смена скорости показа: новая история времени, прежние гистограммы."""
         self.series = {key: TimeSeries(window=self.history_window) for key in self.series}
 
+    # Применить поле «Память» и обновить длительность окна истории.
     def set_memory(self, collisions):
         """Сколько столкновений помнит статистика; накопленное не сбрасывается."""
         self.memory_collisions = int(collisions)
@@ -221,12 +247,14 @@ class Experiment:
         for series in self.series.values():
             series.set_window(self.history_window)
 
+    # Применить поле «Столбиков» и перенести накопленные веса в новые интервалы.
     def set_bins(self, bins):
         """Другое число столбиков; накопленная статистика переносится в новые столбики."""
         self.bins = int(bins)
         for hist in self.hist.values():
             hist.rebin(hist.edges[0], hist.edges[-1], self.bins)
 
+    # Согласовать диапазоны и память после T/масс; средние считаются по измерениям.
     def _rescale_stats(self):
         """После изменения T или масс: перенести гистограммы на новые диапазоны значений
         и пересчитать время памяти (оно зависит от частоты столкновений)."""
@@ -236,12 +264,14 @@ class Experiment:
         for series in self.series.values():
             series.set_window(self.history_window)
 
+    # Текущий вектор v₁, v₂ или v₁−v₂ для рисунка и измерений.
     def velocity(self, obj):
         """Вектор скорости молекулы 1, молекулы 2 или относительной скорости v1 - v2."""
         v1 = self.gas.vel[self.i]
         v2 = self.gas.vel[self.j]
         return {SINGLE: v1, SECOND: v2, PAIR: v1 - v2}[obj]
 
+    # Получить модуль, проекцию и энергию из вектора скорости; названия — в ui/labels.py.
     def _values(self, obj, v):
         """Модуль, проекция и кинетическая энергия для скорости v (вектор или массив векторов).
 
@@ -252,10 +282,12 @@ class Experiment:
         energy = 0.5 * self.mass(obj) * AMU * speed_sq / ENERGY_UNIT
         return {tf.MODULUS: np.sqrt(speed_sq), tf.PROJECTION: v[..., 0], tf.ENERGY: energy}
 
+    # Мгновенное число в шапке панели, включая изменение параметров на паузе.
     def current_value(self, obj, kind):
         """Мгновенное значение из текущих скоростей, независимо от истории."""
         return float(self._values(obj, self.velocity(obj))[kind])
 
+    # Добавить измерение выбранных молекул в гистограммы и временную историю.
     def _sample_selected(self):
         t = self.gas.time
         for obj in OBJECTS:
@@ -263,10 +295,12 @@ class Experiment:
                 self.hist[obj, kind].add(x)
                 self.series[obj, kind].add(t, float(x))
 
+    # Пополнить гистограммы набором скоростей одного наблюдаемого объекта.
     def _add_ensemble(self, obj, velocities):
         for kind, x in self._values(obj, velocities).items():
             self.hist[obj, kind].add(x)
 
+    # Сбор «По всем молекулам»: больше отсчётов без подмены выбранных стрелок.
     def _sample_ensemble(self):
         """Та же статистика, но сразу по многим молекулам того же сорта, что и выбранные."""
         vel = self.gas.vel
@@ -281,11 +315,13 @@ class Experiment:
         ok = p != q
         self._add_ensemble(PAIR, vel[p[ok]] - vel[q[ok]])
 
+    # Постепенно уменьшать вес старых измерений согласно текущей памяти.
     def _forget(self, dt):
         factor = math.exp(-dt / self._memory_time)
         for hist in self.hist.values():
             hist.forget(factor)
 
+    # Сделать физические шаги и после каждого записать реальные измерения.
     def advance(self, n_steps, dt=None):
         """n_steps шагов моделирования; после каждого — отсчёт для выбранных молекул."""
         dt = self.gas.dt if dt is None else dt
@@ -297,11 +333,13 @@ class Experiment:
             if self.ensemble and self.steps_since_reset % ENSEMBLE_EVERY == 0:
                 self._sample_ensemble()
 
+    # Модельное время одного кадра: при нагреве движение не компенсируется уменьшением кадра.
     def frame_duration(self, factor):
         """Модельное время кадра (пс): темп при фиксированных массах не зависит от T."""
         reference_dt = self.gas.dt * math.sqrt(self.temperature / settings.ANIMATION_REFERENCE_TEMPERATURE)
         return factor * reference_dt
 
+    # Посчитать интервал порциями и вернуть остаток, чтобы Qt мог обработать действия.
     def advance_duration(self, duration, seconds=None):
         """Рассчитать часть заданного интервала безопасными шагами, вернуть остаток.
 
@@ -319,6 +357,7 @@ class Experiment:
                 return (n - completed) * dt
         return 0.0
 
+    # Вспомогательное продвижение на factor шагов; используется также служебными замерами.
     def advance_by(self, factor, seconds=None):
         """Шаги не длиннее dt; с бюджетом — вернуть управление между шагами.
 
@@ -336,6 +375,7 @@ class Experiment:
             if time.perf_counter() >= deadline:
                 break
 
+    # Вспомогательный расчёт в пределах бюджета CPU; текущие кадры DemoPage используют advance_duration.
     def advance_for_seconds(self, seconds, chunk=1):
         """Считать шагами dt, пока не пройдёт seconds секунд реального времени."""
         started = time.perf_counter()

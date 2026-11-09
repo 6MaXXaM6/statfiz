@@ -2,6 +2,7 @@
 Общий стиль: размеры шрифтов и линий зависят от разрешения экрана,
 чтобы презентация одинаково читалась на ноутбуке и на проекторе.
 """
+# Для изменения всей программы начинать с settings.py; правила ниже нужны для отдельных типов элементов.
 
 import os
 
@@ -28,17 +29,20 @@ PROJ = settings.COLOR_PROJ       # проекция — фиолетовый
 PAGE_BG = settings.COLOR_PAGE    # фон страниц (карточки на нём — белые)
 
 
+# Имена картинок/HTML передаются страницами; функция находит их и рядом с исходниками, и внутри сборки.
 def resource_path(*parts):
     """Путь к файлу из папки assets — работает и из исходников, и из собранного exe."""
     base = getattr(sys, "_MEIPASS", os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
     return os.path.join(base, "assets", *parts)
 
 
+# Все размеры через px масштабируются вместе с окном; k — коэффициент относительно базового шрифта.
 def px(k=1.0):
     """Размер в пикселях, пропорциональный базовому шрифту."""
     return max(1, int(round(BASE * k)))
 
 
+# Шрифт для отдельной надписи: k меняет размер, bold — жирность.
 def font(k=1.0, bold=False):
     f = QtGui.QFont()
     f.setPixelSize(px(k))
@@ -46,6 +50,7 @@ def font(k=1.0, bold=False):
     return f
 
 
+# Здесь меняются общие цвета полей, списков и подсказок, включая отключённые элементы.
 def light_palette():
     """Светлая палитра для всех виджетов (поля ввода, списки, подсказки)."""
     colors = {
@@ -67,6 +72,7 @@ def light_palette():
     return palette
 
 
+# Общий масштаб текста: настройки FONT_SCALE, LINES_PER_SCREEN и COLUMNS_PER_SCREEN находятся в settings.py.
 def base_for_size(width, height):
     """Логические пиксели Qt уже учитывают масштаб Windows (125%, 150% и т.д.)."""
     return min(settings.FONT_MAX, max(settings.FONT_MIN, int(round(
@@ -74,6 +80,7 @@ def base_for_size(width, height):
             width / settings.COLUMNS_PER_SCREEN) * settings.FONT_SCALE))))
 
 
+# Оформление всего приложения: палитра, фон графиков и правила для кнопок, рамок, полей и ползунков.
 def init_style(app, size=None):
     """Подбирает размер шрифта под экран и настраивает Qt и pyqtgraph."""
     global BASE
@@ -94,6 +101,7 @@ def init_style(app, size=None):
 
     pg.setConfigOptions(antialias=True, background="w", foreground="k")
 
+    # Общие стили: QPushButton — кнопки, QFrame#card — карточки, QSlider — ползунки; изменения видны на всех страницах.
     app.setStyleSheet(
         """
         QMainWindow { background: %(page)s; }
@@ -150,12 +158,14 @@ def init_style(app, size=None):
     )
 
 
+# Надстрочные цифры для обозначений масштаба осей, например 10⁻³.
 def sup(n):
     """Число n верхним индексом: -3 -> '⁻³'."""
     table = str.maketrans("-0123456789", "⁻⁰¹²³⁴⁵⁶⁷⁸⁹")
     return str(n).translate(table)
 
 
+# Единое оформление чисел; digits задаёт знаки после запятой, отсутствующее значение показывается тире.
 def fmt(x, digits=0):
     """Число с разделением разрядов пробелом: 134000 -> '134 000'."""
     if x != x:  # NaN
@@ -164,9 +174,11 @@ def fmt(x, digits=0):
     return s.replace("-", "−")
 
 
+# Следит за изменением окна/F11 и масштабирует уже существующие страницы.
 class WindowFontScale(QtCore.QObject):
     """Меняет относительные шрифты без пересоздания страниц и сброса опыта."""
 
+    # Задержка 60 мс объединяет частые события изменения размера перед пересчётом интерфейса.
     def __init__(self, window):
         super().__init__(window)
         self.window = window
@@ -177,6 +189,7 @@ class WindowFontScale(QtCore.QObject):
         self.timer.timeout.connect(self.apply)
         window.installEventFilter(self)
 
+    # Пересчёт нужен при показе/изменении окна; при закрытии отложенный пересчёт отменяется.
     def eventFilter(self, watched, event):
         if event.type() in (QtCore.QEvent.Resize, QtCore.QEvent.Show):
             self.timer.start()
@@ -184,6 +197,7 @@ class WindowFontScale(QtCore.QObject):
             self.timer.stop()
         return super().eventFilter(watched, event)
 
+    # Обновляет шрифты, отступы и ограничения размеров без создания нового эксперимента.
     def apply(self):
         target = base_for_size(self.window.width(), self.window.height())
         if target == self.base:
@@ -195,6 +209,7 @@ class WindowFontScale(QtCore.QObject):
         # попадает в старые фиксированные колонки и строки.
         for widget in widgets[1:]:
             minimum, maximum = widget.minimumSize(), widget.maximumSize()
+            # Пересчитывает конечные ограничения размеров; специальное значение «без ограничения» оставляет прежним.
             def scaled(size):
                 return QtCore.QSize(*(round(value * ratio) if value < 16777215 else value
                                       for value in (size.width(), size.height())))

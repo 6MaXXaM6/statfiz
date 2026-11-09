@@ -7,21 +7,22 @@ from PyQt5 import QtCore, QtWidgets
 
 from model import theory as tf
 from model.experiment import PAIR, SECOND, SINGLE
+from pages.demo.readouts import significant, stats_ready
 from ui import labels, style
 from ui.plots.hist_plot import HistPlot
 from ui.plots.time_plot import TimePlot
 from ui.widgets import button, hbox, label, vbox
 
-SIDE_STATS_WIDTH = settings.SIDE_STATS_WIDTH       # ширина подписей справа от графиков (в базовых шрифтах)
-QWIDGETSIZE_MAX = (1 << 24) - 1  # "без ограничения" для setMaximumWidth/Height в Qt
 
 # Что можно выбрать в панели: (что наблюдаем, какая величина)
+# Набор и порядок пунктов списка; написание символов менять в ui/labels._PLAIN, HTML-подписи — в _HTML.
 QUANTITIES = ([(obj, kind) for obj in (PAIR, SINGLE, SECOND) for kind in (tf.MODULUS, tf.PROJECTION)]
               + [(SINGLE, tf.ENERGY), (SECOND, tf.ENERGY)])
 
 
+# Один блок «График 1/2»; значения предоставляет опыт, внешний вид графиков — ui/plots/.
 class GraphPanel(QtWidgets.QWidget):
-    """Одна величина: заголовок с выбором и текущим значением, x(t) + распределение, среднее и дисперсия.
+    """Одна величина: выбор и статистика в шапке, x(t) + распределение.
 
     Распределение стоит боком рядом с графиком во времени (общая ось значений).
     Кнопка ↻ поворачивает его в обычный вид — тогда график во времени временно
@@ -33,6 +34,7 @@ class GraphPanel(QtWidgets.QWidget):
     quantity_changed = QtCore.pyqtSignal()
     close_clicked = QtCore.pyqtSignal()
 
+    # Здесь менять заголовок, список, кнопки и пропорции блока; текущие числа обновляются в refresh().
     def __init__(self, obj=PAIR, kind=tf.MODULUS, closable=False):
         super().__init__()
         self.selector = QtWidgets.QComboBox()
@@ -42,23 +44,25 @@ class GraphPanel(QtWidgets.QWidget):
         self.selector.setCurrentIndex(QUANTITIES.index((obj, kind)))
         self.selector.currentIndexChanged.connect(lambda _i: self.quantity_changed.emit())
         self.value = label(size=settings.VALUE_FONT)
-        self.value.setSizePolicy(QtWidgets.QSizePolicy.Ignored, QtWidgets.QSizePolicy.Fixed)
-        header = [label("График 2" if closable else "График 1", .85, bold=True),
-                  self.selector, (self.value, 1)]
+        self.value.setSizePolicy(QtWidgets.QSizePolicy.Preferred, QtWidgets.QSizePolicy.Fixed)
+        self.value.setVisible(settings.SHOW_INSTANT_VALUES)
+        # Названия «График 1/2» относятся к этой панели, а заголовок всей страницы — к DemoPage.
+        header = [vbox(label("График 2" if closable else "График 1", .85, bold=True),
+                       self.selector, self.value, spacing=0)]
 
         self.time_plot = TimePlot()
         self.hist_plot = HistPlot(sideways=True)
         self.hist_plot.setYLink(self.time_plot)
         self.hist_plot.rotate_clicked.connect(self.rotate)
+        # Соотношение ширин истории и распределения сейчас 3:2; менять числа для другой компоновки.
         self.plots_row = hbox((self.time_plot, 3), (self.hist_plot, 2), spacing=0)
-        self.stats = label(size=settings.STATS_FONT, shrinkable=True)
-        # Графики и подписи (среднее, дисперсия): подписи под графиками или, когда графики
-        # на весь экран, справа от них — чтобы графики не становились слишком длинными.
-        self.body = QtWidgets.QBoxLayout(QtWidgets.QBoxLayout.TopToBottom)
-        self.body.setSpacing(style.px(0.15))
-        self.body.addLayout(self.plots_row, 1)
-        self.body.addWidget(self.stats)
-        self.set_side_stats(False)
+        # Статистика всегда в шапке, в том числе при повороте и «только графиках».
+        self.stats = label(size=settings.STATS_FONT)
+        self.stats.setSizePolicy(QtWidgets.QSizePolicy.Preferred, QtWidgets.QSizePolicy.Fixed)
+        self.stats.setAlignment(QtCore.Qt.AlignLeft | QtCore.Qt.AlignVCenter)
+        header.append((self.stats, 1))
+        self.rescale_layout()
+        # Эта строка заменяет исходный символ ↻ из HistPlot; видимую надпись презентации менять здесь.
         self.hist_plot.rotate_button.setText("↻ Повернуть")
         header.append(self.hist_plot.rotate_button)
         if closable:
@@ -67,44 +71,49 @@ class GraphPanel(QtWidgets.QWidget):
         self.header.setObjectName("plotHeader")
         self.header.setLayout(hbox(*header, spacing=style.px(.4),
                                   margins=(style.px(.3), style.px(.2), style.px(.3), style.px(.2))))
-        self.setLayout(vbox(self.header, (self.body, 1), spacing=style.px(.2)))
+        self.setLayout(vbox(self.header, (self.plots_row, 1), spacing=style.px(.2)))
         self._last_count = 0
         self._hist_args = None
 
-    def set_side_stats(self, side):
-        """Подписи справа от графиков (side=True) или под ними."""
-        if side:
-            self.body.setDirection(QtWidgets.QBoxLayout.LeftToRight)
-            # Сбоку ширина постоянная, и компоновка обязана её выделить (под графиками,
-            # наоборот, подпись может сжиматься — Ignored).
-            self.stats.setSizePolicy(QtWidgets.QSizePolicy.Fixed, QtWidgets.QSizePolicy.Preferred)
-            self.stats.setFixedWidth(style.px(SIDE_STATS_WIDTH))
-            self.stats.setMinimumHeight(0)
-            self.stats.setMaximumHeight(QWIDGETSIZE_MAX)
-            self.stats.setAlignment(QtCore.Qt.AlignLeft | QtCore.Qt.AlignVCenter)
-            self.stats.setFont(style.font(settings.SIDE_STATS_FONT))
-        else:
-            self.body.setDirection(QtWidgets.QBoxLayout.TopToBottom)
-            self.stats.setSizePolicy(QtWidgets.QSizePolicy.Ignored, QtWidgets.QSizePolicy.Preferred)
-            self.stats.setMinimumWidth(0)
-            self.stats.setMaximumWidth(QWIDGETSIZE_MAX)
-            self.stats.setFont(style.font(settings.STATS_FONT))
-            # Высота постоянная: иначе от цифр (минус, степени) она меняется на пиксель,
-            # и графики над ними дрожат.
-            self.stats.setFixedHeight(2 * self.stats.fontMetrics().lineSpacing() + style.px(0.4))
-            self.stats.setAlignment(QtCore.Qt.AlignLeft | QtCore.Qt.AlignTop)
-
+    # Фиксируем высоту двух строк: изменение цифр не двигает графики.
     def rescale_layout(self):
-        self.set_side_stats(self.body.direction() == QtWidgets.QBoxLayout.LeftToRight)
+        self.stats.setFont(style.font(settings.STATS_FONT))
+        self.stats.setFixedHeight(2 * self.stats.fontMetrics().lineSpacing() + style.px(.6))
 
+    def show_instant_value(self, visible, exp):
+        """Меняет только надпись; точка, подсветка столбика и измерения остаются."""
+        self.value.setVisible(visible)
+        self.refresh_value(exp)
+
+    def refresh_value(self, exp):
+        obj, kind = self.quantity
+        current = exp.current_value(obj, kind)
+        digits = 1 if kind == tf.ENERGY else 0
+        # Единица уже подписана на оси; в подсказке она есть и у самого числа.
+        self.value.setText("= <b>%s</b>" % (style.fmt(current, digits) if current is not None else "—"))
+        self.value.setToolTip("Мгновенное значение, " + labels.unit(kind))
+
+    def refresh_stats(self, exp):
+        obj, kind = self.quantity
+        self.stats.setText(stats_text(exp, obj, kind))
+        _, var_unit = labels.variance_unit(kind)
+        self.stats.setToolTip(
+            "Среднее — в единицах оси: %s. Дисперсия —%s.\n"
+            "Красным показана теория. Первые %d шагов числа скрыты;\n"
+            "это задержка показа, а не гарантия статистической точности."
+            % (labels.unit(kind), var_unit, settings.STATS_MIN_STEPS))
+
+    # Вернуть пару (объект, величина), соответствующую выбранному пункту списка.
     @property
     def quantity(self):
         return QUANTITIES[self.selector.currentIndex()]
 
+    # Программный аналог выбора из списка; obj/kind должны входить в QUANTITIES.
     def show_quantity(self, obj, kind):
         """Выбрать величину программно (как будто её выбрали в списке)."""
         self.selector.setCurrentIndex(QUANTITIES.index((obj, kind)))
 
+    # Меняется только способ показа: вертикальная шкала общая с историей только при боковом виде.
     def rotate(self):
         """Распределение боком (рядом с графиком во времени) ↔ обычный вид (только распределение)."""
         sideways = not self.hist_plot.sideways
@@ -116,6 +125,7 @@ class GraphPanel(QtWidgets.QWidget):
             self.hist_plot.configure(*self._hist_args)
         self.quantity_changed.emit()  # перерисовать и на паузе, не дожидаясь шага
 
+    # Перенастроить оси и теорию по параметрам опыта; тексты единиц приходят из ui/labels.py.
     def configure(self, exp, low, high, peak):
         """Диапазон значений и масштаб плотности задаёт страница (у двух панелей они могут быть общими)."""
         obj, kind = self.quantity
@@ -127,6 +137,7 @@ class GraphPanel(QtWidgets.QWidget):
         self.hist_plot.configure(*self._hist_args)
         self._last_count = exp.series[obj, kind].count
 
+    # Обновить текущую точку, число и столбики; статистика отдельно в refresh_stats().
     def refresh(self, exp, fast):
         obj, kind = self.quantity
         series = exp.series[obj, kind]
@@ -135,34 +146,32 @@ class GraphPanel(QtWidgets.QWidget):
         new_sample = series.count > self._last_count
         self._last_count = series.count
 
-        digits = 1 if kind == tf.ENERGY else 0
-        self.value.setText("= <b>%s</b> %s" % (style.fmt(current, digits) if current is not None else "—",
-                                               labels.unit(kind)))
+        self.refresh_value(exp)
         if self.time_plot.isVisible():
             theory_mean = tf.mean(kind, exp.scale(obj, kind)) if kind != tf.PROJECTION else None
             self.time_plot.update_view(series, theory_mean, current=(exp.gas.time, current))
         self.hist_plot.update_view(exp.hist[obj, kind], current, highlight=new_sample and not fast)
-        self.stats.setText(stats_text(exp, obj, kind))
 
 
+# Сохраняет число вместе с единицами при переносе текста; видимые слова менять в stats_text().
 def _nowrap(html):
     """Кусок текста, который нельзя переносить посередине (число с единицами и т.п.)."""
     return "<span style='white-space:nowrap'>%s</span>" % html
 
 
+# Подписи шапки. Единицы среднего уже на оси, D — в квадрате этих единиц.
 def stats_text(exp, obj, kind):
-    """Среднее и дисперсия: опыт и теория. Переносы строк — только между частями,
-    а не внутри числа или единиц (важно, когда подписи стоят узкой колонкой справа)."""
+    """Две строки с двумя значащими цифрами, без изменения накопленных данных."""
+    if not stats_ready(exp):
+        return "Набор статистики…<br>⟨%s⟩ = —; D = —" % labels.quantity(obj, kind)
     hist = exp.hist[obj, kind]
-    s = exp.scale(obj, kind)
+    scale = exp.scale(obj, kind)
     theory = "<span style='color:%s'>(теор.&nbsp;%%s)</span>" % style.THEORY
-    digits = 2 if kind == tf.ENERGY else 0
-    unit = labels.unit(kind)
-    mean = "%s %s" % (
-        _nowrap("⟨%s⟩ = <b>%s</b> %s" % (labels.quantity(obj, kind), style.fmt(hist.mean(), digits), unit)),
-        _nowrap(theory % style.fmt(tf.mean(kind, s), digits)))
-    divisor, var_unit = labels.variance_unit(kind)
-    variance = "%s %s" % (
-        _nowrap("D = <b>%s</b>%s" % (style.fmt(hist.variance() / divisor, 1), var_unit.replace(" ", "&nbsp;"))),
-        _nowrap(theory % style.fmt(tf.variance(kind, s) / divisor, 1)))
+    mean = _nowrap("⟨%s⟩ = <b>%s</b> %s" % (
+        labels.quantity(obj, kind), significant(hist.mean()), theory % significant(tf.mean(kind, scale))))
+    divisor, _ = labels.variance_unit(kind)
+    # Для скорости сохраняем прежний масштаб дисперсии 10³, явно указывая деление.
+    name = "D/10³" if divisor == 1e3 else "D"
+    variance = _nowrap("%s = <b>%s</b> %s" % (
+        name, significant(hist.variance() / divisor), theory % significant(tf.variance(kind, scale) / divisor)))
     return mean + "<br>" + variance

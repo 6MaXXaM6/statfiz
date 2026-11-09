@@ -4,19 +4,24 @@ from PyQt5 import QtCore, QtGui, QtWidgets
 from ui import style
 
 
+# Самостоятельная иллюстрация раздела 1, не текущие частицы эксперимента.
 class CollisionSketch(QtWidgets.QWidget):
+    # Задаёт минимальное место под рисунок; размеры выражены в базовых шрифтах.
     def __init__(self):
         super().__init__()
         self.setMinimumSize(style.px(14), style.px(12))
 
+    # Здесь рисуется вся схема: диски, линии, стрелки и их текстовые обозначения.
     def paintEvent(self, event):
         p = QtGui.QPainter(self)
         p.setRenderHint(QtGui.QPainter.Antialiasing)
         p.fillRect(self.rect(), QtCore.Qt.white)
         u = min(self.width(), self.height()) / 11
         center = QtCore.QPointF(self.width()/2, self.height()/2)
+        # Переводит учебные координаты рисунка в пиксели окна.
         def at(v):
             return center + QtCore.QPointF(v[0]*u, -v[1]*u)
+        # Рисует подпись; цвет и текст передаются в вызовах в конце метода.
         def caption(text, point, color):
             doc = QtGui.QTextDocument()
             doc.setDefaultFont(style.font(.95, True))
@@ -26,6 +31,7 @@ class CollisionSketch(QtWidgets.QWidget):
             p.translate(point)
             doc.drawContents(p)
             p.restore()
+        # Рисует стрелку схемы; head задаёт длину наконечника в координатах рисунка.
         def arrow(start, end, color, head=.45):
             a,b = at(start),at(end)
             delta = end-start
@@ -40,6 +46,7 @@ class CollisionSketch(QtWidgets.QWidget):
             p.drawLine(a,at(base))
             p.setBrush(QtGui.QColor(color))
             p.drawPolygon(QtGui.QPolygonF([b,at(base+normal),at(base-normal)]))
+        # Положения дисков и исходные стрелки этого рисунка меняются в p1/p2 и v1/v2.
         p1,p2 = np.array([-1.1,.35]),np.array([1.3,-.45])
         v1,v2 = np.array([2.2,-.6]),np.array([-1.4,.9])
         d = p2-p1
@@ -59,6 +66,7 @@ class CollisionSketch(QtWidgets.QWidget):
         arrow(p1,p1+after1,style.HILITE)
         arrow(p2,p2+after2,style.HILITE)
         arrow(p1+n*1.1,p1+n*2.3,style.PROJ,.36)
+        # Обозначения стрелок и смещения подписей; поясняющая строка — последний caption ниже.
         for text,point,offset,color in (
             ("n",p1+n*2.3,(0,-.8),style.PROJ),
             ("v₁",p1-v1,(-.9,-.3),"black"),("v₂",p2-v2,(.1,-.2),"black"),

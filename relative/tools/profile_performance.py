@@ -1,3 +1,6 @@
+# СЛУЖЕБНЫЕ ЗАМЕРЫ: это отдельный нагрузочный сценарий, не цикл кадров живой презентации.
+# frames/particles/factor/fast/history задают условия замера, выводится время в миллисекундах.
+
 """Профиль кадра: расчёт, подготовка графиков и Qt-отрисовка, без ожидания таймера."""
 import argparse
 import cProfile
@@ -16,6 +19,7 @@ from main import MainWindow  # noqa: E402
 from ui import style  # noqa: E402
 
 
+# Измерить отдельно расчёт, подготовку графиков и рисование Qt без задержки экранного таймера.
 def run(frames=120, particles=150, factor=1., fast=False, history=0):
     app = QtWidgets.QApplication.instance() or QtWidgets.QApplication([])
     style.init_style(app, QtCore.QSize(1366, 768))

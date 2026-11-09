@@ -1,3 +1,6 @@
+# СЛУЖЕБНАЯ ПРОВЕРКА ВЁРСТКИ: после изменения шрифтов/отступов запускать make layout.
+# Тексты настоящих кнопок менять в pages/, здесь только сценарий их проверки.
+
 """
 Проверка компоновки: окно фиксированного размера (как на весь экран), по очереди нажимаются
 кнопки страницы "Презентация", после каждого действия проверяется, что
@@ -19,6 +22,7 @@ SCREENS = ["1024x768", "1366x768", "1920x1080"]
 CONTROLS = (QtWidgets.QAbstractButton, QtWidgets.QComboBox, QtWidgets.QSlider, QtWidgets.QSpinBox)
 
 
+# Найти элементы презентации, которые не помещаются в заданном окне.
 def problems(win):
     """Список нарушений компоновки в текущем состоянии окна."""
     found = []
@@ -37,6 +41,7 @@ def problems(win):
     return found
 
 
+# Запомнить области графиков для проверки дрожания компоновки между кадрами.
 def plot_areas(page):
     """Где на экране области данных всех графиков (чтобы заметить, если они "ездят")."""
     areas = []
@@ -48,6 +53,7 @@ def plot_areas(page):
     return areas
 
 
+# Прогнать несколько кадров без обычного ожидания таймера и сравнить геометрию.
 def run_frames(app, page, n=30):
     """Кадры расчёта; возвращает True, если области графиков сдвигались между кадрами."""
     before = plot_areas(page)
@@ -62,17 +68,21 @@ def run_frames(app, page, n=30):
     return moved
 
 
+# Список действий пользователя для проверки кнопок, страниц и режимов.
 def scenario(page):
     """Действия пользователя: [(описание, функция), ...]."""
     from model.experiment import GAS_MIX, GAS_PURE
     run = page.run
 
+    # Подготовить отложенное нажатие кнопки для сценария.
     def click(button):
         return lambda: button.click()
 
+    # Подготовить поворот распределения в заданной панели.
     def rotate(n):
         return lambda: page.panels[n].hist_plot.rotate_button.click()
 
+    # Подготовить выбор величины в нужном графике.
     def show(n, obj, kind):
         return lambda: page.panels[n].show_quantity(obj, kind)
 
@@ -104,11 +114,13 @@ def scenario(page):
     ] + extremes(page)
 
 
+# Имитировать подтверждённый ввод значения параметра.
 def set_param(control, value):
     """Как будто пользователь ввёл число: значение + сигнал без задержки."""
     return lambda: (control.spin.setValue(value), control.changed.emit(value))
 
 
+# Добавить крайние значения полей, смеси и выбора молекул к проверке.
 def extremes(page):
     """Крайние значения параметров, выбор молекул мышью и все величины в списках графиков."""
     from model.experiment import GAS_MIX
@@ -136,6 +148,7 @@ def extremes(page):
     return steps
 
 
+# Запустить полный сценарий на одном разрешении и вывести найденные проблемы.
 def check(screen):
     import main
     from ui import style

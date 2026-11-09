@@ -1,3 +1,6 @@
+# МОДЕЛЬ ДВИЖЕНИЯ: для текстов и оформления менять pages/ и ui/, а не формулы ударов.
+# Начальные значения и пределы — settings.py; единицы модели перечислены ниже.
+
 """
 Модель двумерного идеального газа из твёрдых дисков.
 
@@ -34,19 +37,23 @@ R_MIN = R_MAX / M_MAX ** (1.0 / 3)   # ≈ 0.41 нм
 NM_PER_MS_PS = 1e-3
 
 
+# Модельный размер частицы; R_MAX и M_MAX влияют на реальные столкновения, не только кружки.
 def radius_for_mass(mass_amu):
     """Радиус молекулы (нм) по её массе (а.е.м.): r ∝ m^(1/3)."""
     return R_MAX * np.cbrt(np.clip(mass_amu, 1.0, M_MAX) / M_MAX)
 
 
+# Масштаб одной компоненты скорости: рост T увеличивает тепловые скорости.
 def thermal_sigma(mass_amu, temperature):
     """Среднеквадратичное значение одной проекции скорости sqrt(kT/m), м/с."""
     return np.sqrt(K_B * temperature / (mass_amu * AMU))
 
 
+# Состояние частиц без Qt; сосуд и кружки рисует ui/plots/box_view.py.
 class Gas:
     """Состояние газа и шаг моделирования."""
 
+    # Создать частицы, начальные положения и скорости; стартовые параметры передаёт Experiment.
     def __init__(self, n_a, n_b, mass_a, mass_b, temperature, seed=None, start="maxwell", collisions=True):
         self.rng = np.random.default_rng(seed)
         self.box = BOX_SIZE
@@ -70,6 +77,7 @@ class Gas:
         self.vel = self._beam_velocities() if start == "beam" else self._maxwell_velocities()
         self.dt = self.recommended_dt()
 
+    # Текущее число частиц из массива масс.
     @property
     def n(self):
         return len(self.mass)
@@ -77,6 +85,7 @@ class Gas:
     # ------------------------------------------------------------------
     # Начальные условия
     # ------------------------------------------------------------------
+    # Разместить частицы без перекрытий; большой N должен помещаться в BOX_SIZE.
     def _random_positions(self, n):
         """Случайные неперекрывающиеся положения: по одной молекуле в случайной клетке сетки."""
         r_max = self.radius.max()
@@ -94,12 +103,14 @@ class Gas:
         pos[:, 1] = offset + (cy + 0.5) * cell + jitter[:, 1]
         return pos
 
+    # Начальное общее направление для «Все одинаковые»; угол задан BEAM_ANGLE.
     def _beam_velocities(self):
         """Одна направленность и энергия kT у каждой молекулы."""
         angle = np.deg2rad(settings.BEAM_ANGLE)
         speed = np.sqrt(2) * thermal_sigma(self.mass, self.temperature)
         return speed[:, None] * np.array([np.cos(angle), np.sin(angle)])
 
+    # Случайные равновесные скорости с общей энергией, согласованной с температурой.
     def _maxwell_velocities(self):
         """Скорости по распределению Максвелла, затем точная подгонка энергии под T."""
         sigma = thermal_sigma(self.mass, self.temperature)
@@ -111,14 +122,17 @@ class Gas:
     # ------------------------------------------------------------------
     # Управление параметрами
     # ------------------------------------------------------------------
+    # Полная энергия для контроля модели; экранные единицы энергии задаются отдельно.
     def kinetic_energy(self):
         """Полная кинетическая энергия, Дж."""
         return 0.5 * np.sum(self.mass * AMU * np.sum(self.vel ** 2, axis=1))
 
+    # Суммарный импульс для проверки сохранения при столкновениях.
     def momentum(self):
         """Полный импульс, кг·м/с (вектор)."""
         return np.sum((self.mass * AMU)[:, None] * self.vel, axis=0)
 
+    # Изменить реальные скорости и безопасный шаг времени после изменения температуры.
     def set_temperature(self, temperature):
         """Меняет температуру, умножая все скорости на один коэффициент.
 
@@ -132,6 +146,7 @@ class Gas:
             self.vel *= np.sqrt(target / current)
         self.dt = self.recommended_dt()
 
+    # Обновить массы, размеры и скорости, сохранив заданную температуру.
     def set_masses(self, mass_a, mass_b):
         """Новые массы без пересоздания газа: молекулы остаются на местах.
 
@@ -146,6 +161,7 @@ class Gas:
         self.separate_overlaps()
         self.dt = self.recommended_dt()
 
+    # Развести пересекающиеся диски после смены размеров; это часть геометрии модели.
     def separate_overlaps(self, max_rounds=200):
         """Раздвинуть перекрывшиеся диски (например, после того как радиусы выросли)."""
         for _ in range(max_rounds):
@@ -169,6 +185,7 @@ class Gas:
             for axis in (0, 1):
                 np.clip(self.pos[:, axis], self.radius, self.box - self.radius, out=self.pos[:, axis])
 
+    # Безопасный физический шаг; скорость показа кадра задаётся отдельно в Experiment.
     def recommended_dt(self):
         """Шаг по времени (пс): быстрая молекула за шаг смещается не более чем на 1/4 радиуса."""
         v_fast = 4.0 * thermal_sigma(self.mass.min(), self.temperature)
@@ -177,6 +194,7 @@ class Gas:
     # ------------------------------------------------------------------
     # Шаг моделирования
     # ------------------------------------------------------------------
+    # Один шаг движения, отражений и, если включены, столкновений.
     def step(self, dt=None):
         """Сдвигает систему на время dt (пс)."""
         if dt is None:
@@ -187,6 +205,7 @@ class Gas:
             self._collide()
         self.time += dt
 
+    # Зеркальные отражения от стенок и возвращение координат внутрь сосуда.
     def _bounce_walls(self):
         r = self.radius
         for axis in (0, 1):
@@ -197,6 +216,7 @@ class Gas:
             # Возвращаем внутрь, если молекула успела "залезть" в стенку.
             np.clip(self.pos[:, axis], r, self.box - r, out=self.pos[:, axis])
 
+    # Найти близкие пары для обработки столкновений без полного перебора всех пар.
     def find_close_pairs(self):
         """Пары молекул (i, j), диски которых перекрываются.
 
@@ -228,6 +248,7 @@ class Gas:
             return np.empty(0, dtype=int), np.empty(0, dtype=int)
         return np.concatenate(found_i), np.concatenate(found_j)
 
+    # Обработать упругие удары сближающихся частиц; для правки стрелок сюда не требуется.
     def _collide(self):
         ii, jj = self.find_close_pairs()
         for i, j in zip(ii, jj):
@@ -246,6 +267,7 @@ class Gas:
                 self.collisions += 1
             self._push_apart(i, j, normal, dist)
 
+    # Устранить геометрическое перекрытие конкретной пары после контакта.
     def _push_apart(self, i, j, normal, dist):
         """Раздвинуть перекрывшиеся диски i и j вдоль линии центров (на скорости и энергию не влияет)."""
         overlap = self.radius[i] + self.radius[j] - dist
@@ -253,6 +275,7 @@ class Gas:
             self.pos[i] -= 0.5 * overlap * normal
             self.pos[j] += 0.5 * overlap * normal
 
+    # Оценить время между столкновениями выбранной частицы для поля «Память».
     def collision_time(self, k):
         """Среднее время (пс) между столкновениями молекулы k — оценка кинетической теории (2D).
 
@@ -276,6 +299,7 @@ class Gas:
     # ------------------------------------------------------------------
     # Вспомогательное
     # ------------------------------------------------------------------
+    # Найти частицу под мышью; допустимый радиус щелчка задаёт CLICK_DISTANCE.
     def nearest(self, x, y, max_dist=None):
         """Индекс молекулы, ближайшей к точке (x, y), или None."""
         d = np.hypot(self.pos[:, 0] - x, self.pos[:, 1] - y)
@@ -284,5 +308,6 @@ class Gas:
             return None
         return k
 
+    # Индексы частиц сорта A или B для выбора пары и ансамблевой статистики.
     def indices_of(self, species):
         return np.nonzero(self.species == species)[0]

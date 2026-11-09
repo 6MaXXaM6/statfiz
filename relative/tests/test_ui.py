@@ -124,6 +124,8 @@ def make_fixed_demo(app):
     win.show_demo()
     win.demo.run.pause()
     d = win.demo
+    d.instant_action.setChecked(True)
+    d.projection_action.setChecked(True)
     d.exp.configure_gas("pure", 28, 28, 2, 1, collisions=False)
     d.exp.gas.pos[:] = [[25, 25], [75, 75]]
     d.exp.gas.vel[:] = [[300, 400], [-100, 200]]
@@ -137,7 +139,8 @@ def assert_display(d, panel, expected):
     from ui import labels
     kind = panel.quantity[1]
     digits = 1 if kind == tf.ENERGY else 0
-    assert panel.value.text() == f"= <b>{style.fmt(expected, digits)}</b> {labels.unit(kind)}"
+    assert panel.value.text() == f"= <b>{style.fmt(expected, digits)}</b>"
+    assert labels.unit(kind) in panel.value.toolTip()
     np.testing.assert_allclose(panel.hist_plot.current.value(), expected)
     if panel.time_plot.isVisible():
         times, values = panel.time_plot.dot.getData()

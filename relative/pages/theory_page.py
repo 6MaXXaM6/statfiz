@@ -10,6 +10,8 @@ from pages.theory.curve_demo import CurveDemo
 from pages.theory.sampling_demo import SamplingDemo
 from pages.theory.collision_sketch import CollisionSketch
 
+# Карта разделов: (название в меню, HTML в assets/theory/, пример справа).
+# Заголовок внутри текста меняется отдельно: <h2> в соответствующем HTML.
 SECTIONS = [
     ("1. Модель газа", "01_model.html", CollisionSketch),
     ("2. Проекция скорости", "02_projection.html", lambda: CurveDemo("projection")),
@@ -22,7 +24,9 @@ SECTIONS = [
 ]
 
 
+# Оболочка теории: выбирает HTML-текст и пример справа по списку SECTIONS.
 class TheoryPage(QtWidgets.QWidget):
+    # Создаёт все разделы при запуске; после правки HTML нужен перезапуск приложения.
     def __init__(self, go_home, go_demo):
         super().__init__()
         self.stack = QtWidgets.QStackedWidget()
@@ -46,6 +50,7 @@ class TheoryPage(QtWidgets.QWidget):
         nav.addStretch(1)
         content = QtWidgets.QWidget()
         content.setLayout(nav)
+        # Здесь редактируются надписи навигационных кнопок; «На главную» — в ui/widgets.header_bar.
         menu = button("☰  Разделы", lambda: self.drawer.toggle())
         self.back = button("◀ Назад", lambda: self.show_section(self.stack.currentIndex() - 1))
         self.next = button("Далее ▶", lambda: self.show_section(self.stack.currentIndex() + 1))
@@ -58,10 +63,12 @@ class TheoryPage(QtWidgets.QWidget):
         self.drawer = Drawer(self, content, settings.DRAWER_WIDTH)
         self.show_section(0)
 
+    # Обработчик пункта меню: перейти в раздел и убрать выдвижную панель.
     def _choose(self, index):
         self.show_section(index)
         self.drawer.close()
 
+    # Переключает раздел, отмечает его в меню и обновляет подпись «номер / всего».
     def show_section(self, index):
         if not 0 <= index < self.stack.count():
             return
@@ -69,8 +76,10 @@ class TheoryPage(QtWidgets.QWidget):
         self.nav[index].setChecked(True)
         self.back.setEnabled(index > 0)
         self.next.setEnabled(index + 1 < self.stack.count())
+        # Нижняя подпись вычисляется заново при переходе, поэтому менять её шаблон здесь.
         self.caption.setText(f"{index + 1} / {self.stack.count()} · {SECTIONS[index][0].split('. ', 1)[1]}")
 
+    # Держит выдвижное меню ниже шапки при изменении размера окна.
     def resizeEvent(self, event):
         super().resizeEvent(event)
         self.drawer.set_top(self.header.height())

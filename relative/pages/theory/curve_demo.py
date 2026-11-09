@@ -12,6 +12,7 @@ from ui.plots.base import StaticPlot, pen
 from ui.widgets import ParamControl, button, hbox, vbox
 
 
+# Формулы подписей: после изменения <math> запустить tools/render_formulas.py.
 SIGMA = r'<math>\sigma = \sqrt{\frac{kT}{m}}</math>'
 VMP = r'<math>v_{\mathrm{вер}} = \sqrt{\frac{kT}{m}}</math>'
 MU = r'<math>\mu = \frac{m_1m_2}{m_1+m_2}</math>'
@@ -19,12 +20,16 @@ RATIO = r'<math>\frac{\langle |\mathbf{v}_{\mathrm{отн}}|\rangle}{\langle |\m
 SCALE = r'<math>\sqrt{\frac{m_1}{\mu}}</math>'
 
 
+# Общий виджет пяти примеров: вариант выбирается в SECTIONS страницы теории.
 class CurveDemo(QtWidgets.QWidget):
+    # Создаёт график, поля и кнопки; собственные диапазоны теории заданы прямо ниже.
     def __init__(self, variant):
         super().__init__()
         self.variant = variant
         self.start_m2 = 4 if variant == "mixture" else 28
         two = variant in ("relative", "mixture")
+        # Диапазоны и старт здесь самостоятельные: START_TEMPERATURE презентации на них не влияет.
+        # Если меняется старт, поправить также reset(); серый эталон в update_view — отдельно.
         self.temperature = ParamControl("Температура T, К", 50, 1500, 300)
         self.mass_1 = ParamControl("Масса m₁, а.е.м." if two else "Масса m, а.е.м.", 1, 200, 28)
         self.mass_2 = ParamControl("Масса m₂, а.е.м.", 1, 200, self.start_m2)
@@ -34,6 +39,7 @@ class CurveDemo(QtWidgets.QWidget):
         self.legend = self.plot.addLegend(offset=(-10, 10), labelTextSize=f"{style.px(.8)}px")
         self.readout = FormulaReadout()
         self.items = []
+        # Названия кнопок и порядок блоков примера меняются в этой компоновке.
         self.setLayout(vbox((self.plot, 1), self.readout, self.temperature, self.mass_1, self.mass_2,
             hbox(None, button("Подогнать масштаб", self.fit_axis), button("Сбросить", self.reset),
                  spacing=style.px(.4)), spacing=style.px(.3)))
@@ -42,15 +48,18 @@ class CurveDemo(QtWidgets.QWidget):
             c.spin.valueChanged.connect(self.update_view)
         self.reset()
 
+    # Выбирает тип кривой: проекция, модуль или энергия; это не отображаемая надпись.
     @property
     def kind(self):
         return self.variant if self.variant in (tf.PROJECTION, tf.ENERGY) else tf.MODULUS
 
+    # Возвращает значения кнопкой «Сбросить»; согласовать их со стартом ползунков выше.
     def reset(self):
         for c, value in ((self.temperature, 300), (self.mass_1, 28), (self.mass_2, self.start_m2)):
             c.set_value_silently(value)
         self.fit_axis()
 
+    # Кнопка «Подогнать масштаб»: выбирает ось; запас задаёт THEORY_AXIS_ROOM.
     def fit_axis(self):
         t, m1, m2 = self.temperature.value(), self.mass_1.value(), self.mass_2.value()
         mass = tf.reduced_mass(m1, m2) if self.variant in ("relative", "mixture") else m1
@@ -58,6 +67,7 @@ class CurveDemo(QtWidgets.QWidget):
         self.high = tf.value_range(self.kind, scale)[1] * settings.THEORY_AXIS_ROOM
         self.update_view()
 
+    # Обновляет график и подписи; нужный раздел искать по веткам self.variant ниже.
     def update_view(self, *_):
         if not hasattr(self, "high"):
             return
@@ -65,16 +75,20 @@ class CurveDemo(QtWidgets.QWidget):
         low = -self.high if self.kind == tf.PROJECTION else 0
         xs = np.linspace(low, self.high, 300)
         s = tf.sigma_for(m1, t)
+        # Кортеж кривой: (масштаб данных, цвет, пунктир, надпись в легенде).
         curves = [(tf.sigma_for(28, 300), "#9a9a9a", True, "T = 300 К, m = 28")]
+        # Раздел 2: текст под графиком и метки −σ/+σ редактируются в этой ветке.
         if self.variant == "projection":
             curves += [(s, style.PROJ, False, "f(vₓ)")]
             markers = [(-s, style.PROJ, "−σ"), (s, style.PROJ, "+σ")]
             text = f"{SIGMA} = <b>{style.fmt(s)}</b> м/с &nbsp; ⟨vₓ⟩ = 0 &nbsp; D = σ² = <b>{style.fmt(s*s/1e3,1)}</b>·10³ (м/с)²"
+        # Раздел 3: здесь названия характерных скоростей и строка их значений.
         elif self.variant == "modulus":
             mean, rms = tf.mean(tf.MODULUS, s), s*np.sqrt(2)
             curves += [(s, style.REL, False, "f(|v|)")]
             markers = [(s, style.MOL2, "vвер"), (mean, style.THEORY, "⟨v⟩"), (rms, style.PROJ, "√⟨v²⟩")]
             text = f"{VMP} = <b>{style.fmt(s)}</b> &nbsp; ⟨v⟩ = <b>{style.fmt(mean)}</b> &nbsp; √⟨v²⟩ = <b>{style.fmt(rms)}</b> м/с"
+        # Разделы 4 и 6 используют общий блок; правка подписи здесь затронет оба.
         elif self.variant in ("relative", "mixture"):
             mu = tf.reduced_mass(m1, m2)
             s2, sr = tf.sigma_for(m2, t), tf.sigma_for(mu, t)
@@ -85,6 +99,7 @@ class CurveDemo(QtWidgets.QWidget):
             ratio = "√2 ≈ 1.414" if m1 == m2 else f"{SCALE} = {np.sqrt(m1/mu):.3f}"
             text = f"{MU} = <b>{style.fmt(mu,1)}</b> а.е.м.<br>⟨|v₁|⟩ = {style.fmt(mean1)}, ⟨|v₂|⟩ = {style.fmt(tf.mean(tf.MODULUS,s2))}, ⟨|vотн|⟩ = <b>{style.fmt(meanr)}</b> м/с<br>{RATIO} = <b>{ratio}</b>"
         else:
+            # Раздел 5: подписи энергии и пояснение о независимости распределения от массы.
             s = K_B*t/ENERGY_UNIT
             curves = [(K_B*300/ENERGY_UNIT,"#9a9a9a",True,"T = 300 К"), (s,style.THEORY,False,"f(E)")]
             markers = [(s,style.REL,"⟨E⟩ = kT")]
@@ -107,6 +122,7 @@ class CurveDemo(QtWidgets.QWidget):
             text_item.setPos(x,peak*factor*(1.12-row*.09))
             self.plot.addItem(text_item)
             self.items.extend((line,text_item))
+        # Горизонтальная шкала сохраняется до «Подогнать масштаб»; здесь назначаются оси и подписи.
         self.plot.setXRange(low,self.high,padding=0)
         self.plot.setYRange(0,peak*factor*1.15,padding=0)
         value = "E" if self.kind == tf.ENERGY else "vₓ" if self.kind == tf.PROJECTION else "|v|"

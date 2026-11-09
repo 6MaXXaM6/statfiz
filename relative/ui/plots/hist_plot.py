@@ -1,4 +1,5 @@
 """Распределение вероятностей: столбики эксперимента и кривая теории."""
+# На презентации текст кнопки ↻ заменяется на «Повернуть» в pages/demo/graph_panel.py.
 
 import settings
 
@@ -17,6 +18,7 @@ FLASH_MIN = 0.03     # более слабая подсветка не рису�
 HEADROOM = settings.HIST_HEADROOM      # запас по высоте над максимумом теоретической кривой
 
 
+# Подбирает степень десяти для читаемой оси плотности, не меняя физическое распределение.
 def density_exponent(peak):
     """Показатель степени для оси плотности: 0.0012 с/м -> -3 (ось в единицах 10⁻³ с/м)."""
     if peak <= 0 or not np.isfinite(peak):
@@ -24,6 +26,7 @@ def density_exponent(peak):
     return int(math.floor(math.log10(peak)))
 
 
+# Гистограмма используется в презентации и в учебном примере набора отсчётов.
 class HistPlot(StaticPlot):
     """Гистограмма + теория.
 
@@ -38,6 +41,7 @@ class HistPlot(StaticPlot):
 
     rotate_clicked = QtCore.pyqtSignal()
 
+    # Цвета столбиков/теории — в settings.py; исходная кнопка ↻ и её подсказка создаются здесь.
     def __init__(self, sideways=True):
         super().__init__()
         self.theory = self.plot(pen=pen(style.THEORY, settings.THEORY_LINE))
@@ -49,6 +53,7 @@ class HistPlot(StaticPlot):
         self.clipped = pg.ScatterPlotItem(size=style.px(0.8), brush="#1a2a4a", pen=None)
         self.clipped.setZValue(6)
         self.addItem(self.clipped)
+        # Обработчик лишь сообщает о повороте; скрытие временного графика делает GraphPanel.rotate.
         self.rotate_button = overlay_button(self, "↻", "Повернуть распределение", self.rotate_clicked.emit)
         self.bars = None
         self.flash_bars = None
@@ -62,6 +67,7 @@ class HistPlot(StaticPlot):
         self._curves = {}
         self.set_orientation(sideways)
 
+    # Размещает накладную кнопку, только если она ещё находится поверх самого графика.
     def resizeEvent(self, event):
         super().resizeEvent(event)
         # pyqtgraph вызывает resizeEvent ещё до конца __init__, когда кнопки нет.
@@ -70,16 +76,19 @@ class HistPlot(StaticPlot):
             place_overlay(button, self)
 
     # --- ориентация: единственное место, где важно, что по какой оси ---
+    # Переставляет оси для бокового вида; остальные методы используют одну схему данных.
     def _xy(self, values, densities):
         """Координаты точки графика по (значение величины, плотность)."""
         return (densities, values) if self.sideways else (values, densities)
 
+    # Геометрия столбиков для выбранной ориентации; ширина столбика не равна его высоте плотности.
     def _bar_opts(self, centers, width, heights):
         n = len(centers)
         if self.sideways:
             return dict(x0=np.zeros(n), y=centers, width=heights, height=np.full(n, width))
         return dict(x=centers, y0=np.zeros(n), width=np.full(n, width), height=heights)
 
+    # Поворачивает распределение, линии и маркеры; накопленная статистика от поворота не меняется.
     def set_orientation(self, sideways):
         if sideways == self.sideways:
             return
@@ -100,6 +109,7 @@ class HistPlot(StaticPlot):
         self._draw_curves()
 
     # --- настройка под выбранную величину ---
+    # Запоминает подписи и теорию; запас шкалы задаётся HIST_HEADROOM в settings.py.
     def configure(self, value_label, x, pdf, other_pdf=None, peak=None, density_unit="с/м", rescale=True):
         """value_label — подпись оси значений с единицами ("|v₁|, м/с");
         x, pdf — теоретическая кривая; other_pdf — вторая кривая пунктиром;
@@ -118,9 +128,11 @@ class HistPlot(StaticPlot):
         self._apply_axes()
         self._draw_curves()
 
+    # Переводит плотность в масштаб оси 10ⁿ; нужен для согласованного рисования кривой и столбиков.
     def _density_factor(self):
         return 10.0 ** (-self.exponent)
 
+    # Здесь собирается подпись f и выбирается, на какой оси величина, а на какой плотность.
     def _apply_axes(self):
         power = "10%s " % style.sup(self.exponent) if self.exponent else ""
         density = "f, %s%s" % (power, self.density_unit)  # f — плотность вероятности
@@ -133,6 +145,7 @@ class HistPlot(StaticPlot):
         self.setXRange(x_min, x_max, padding=0)
         self.setYRange(y_min, y_max, padding=0)
 
+    # Отображает основную теорию и необязательную дополнительную пунктирную кривую.
     def _draw_curves(self):
         if not self._curves:
             return
@@ -144,6 +157,7 @@ class HistPlot(StaticPlot):
             self.other_theory.setData(*self._xy(x, other * k))
 
     # --- кадр ---
+    # Обновляет столбики; треугольник у края означает превышение выбранной шкалы плотности.
     def update_view(self, hist, current=None, highlight=False, show_mean=False):
         """highlight=True — подсветить столбик, в который попало текущее значение."""
         dens = hist.density() * self._density_factor()
@@ -155,6 +169,7 @@ class HistPlot(StaticPlot):
         show_line_at(self.current, current)
         show_line_at(self.exp_mean, hist.mean() if show_mean else None)
 
+    # Подсветка нового измерения; её цвет — COLOR_HILITE, затухание — FLASH_DECAY.
     def _update_flash(self, hist, heights, value):
         """Столбик, который только что подрос, вспыхивает оранжевым и плавно гаснет."""
         if len(self.flash) != len(heights):

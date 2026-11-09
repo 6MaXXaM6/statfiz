@@ -1,3 +1,6 @@
+# ПРАВКА ФОРМУЛ: запускать после изменения текста внутри <math>, даже при смене пробелов.
+# Обычные абзацы не требуют генерации; готовая программа читает SVG без matplotlib.
+
 """Пересобрать SVG из <math> в assets/theory/*.html.
 
 Только для подготовки ресурсов: pip install matplotlib==3.7.5.
@@ -15,6 +18,7 @@ from matplotlib import mathtext  # noqa: E402
 ROOT = Path(__file__).resolve().parents[1] / "assets" / "theory"
 
 
+# Собрать <math> из HTML и строк учебных примеров и создать соответствующие SVG.
 def main():
     output = ROOT / "formulas"
     output.mkdir(exist_ok=True)

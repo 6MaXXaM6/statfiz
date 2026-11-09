@@ -7,6 +7,7 @@ from PyQt5 import QtCore, QtGui
 from ui import style
 
 
+# Для смены фото/эмблемы заменить файл в assets или путь на странице; пропорции картинки сохраняются.
 def load_pixmap(filename, width, height):
     """Картинка, вписанная в width×height, или None, если файла нет."""
     if not filename:
