@@ -17,9 +17,9 @@ class TimePlot(StaticPlot):
     участке — выглядит так же, а рисуется во много раз быстрее.
     """
 
-    # Ось времени оставляем без текстовой подписи; числовые деления сохраняются.
+    # Короткая подпись в одну строку не увеличивает нижнее поле графика.
     def __init__(self):
-        super().__init__()
+        super().__init__(xlabel="Время, у.е.")
         self.value_factor = self.time_factor = 1.0
         self._history_key = None
         self.curve = self.plot(pen=pen(style.REL, settings.CURVE_LINE))

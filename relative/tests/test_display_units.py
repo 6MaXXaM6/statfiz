@@ -53,7 +53,7 @@ def test_probability_density_keeps_area_and_model_data(app, kind, sideways):
     plot.configure('X, у.е.', x, pdf, peak=max(pdf.max(), hist.density().max()),
                    density_unit='у.е.⁻¹', rescale=False, value_factor=factor)
     plot.update_view(hist, current=hist.centers[3])
-    assert plot.getAxis('bottom' if sideways else 'left').labelText == ''
+    assert plot.getAxis('bottom' if sideways else 'left').labelText == 'Плотность вероятности'
     assert np.sum(plot.bars.opts['width'] * plot.bars.opts['height']) == pytest.approx(1.)
     assert np.trapz(plot._curves['pdf'], plot._curves['x']) == pytest.approx(np.trapz(pdf, x))
     assert plot.current.value() == pytest.approx(hist.centers[3] * factor)

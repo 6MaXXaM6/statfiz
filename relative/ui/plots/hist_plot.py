@@ -139,12 +139,13 @@ class HistPlot(StaticPlot):
     def _density_factor(self):
         return 10.0 ** (-self.exponent)
 
-    # Ось плотности без текстовой подписи; подпись выбранной величины сохраняется.
+    # Подпись плотности переходит на вертикальную ось при повороте распределения.
     def _apply_axes(self):
         value = self.value_label
-        self.set_axis_label("bottom", "" if self.sideways else value)
+        density = "Плотность вероятности"
+        self.set_axis_label("bottom", density if self.sideways else value)
         if not self.sideways:
-            self.set_axis_label("left", "")
+            self.set_axis_label("left", density)
         x_min, y_min = self._xy(self.low, 0.0)
         x_max, y_max = self._xy(self.high, self.top)
         self.setXRange(x_min, x_max, padding=0)
