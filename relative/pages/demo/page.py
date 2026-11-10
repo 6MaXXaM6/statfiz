@@ -19,7 +19,7 @@ from pages.demo.gas_panel import GasPanel
 from pages.demo.graph_panel import GraphPanel
 from pages.demo.readouts import ratio_text, vector_legend
 from pages.demo.run_controls import RunControls
-from ui import style
+from ui import style, units
 from ui.icons import zoom_icon
 from ui.plots.box_view import BoxView
 from ui.plots.vector_view import VectorView
@@ -87,26 +87,47 @@ class DemoPage(QtWidgets.QWidget):
         # Высота строки сравнения постоянная (две строки), чтобы графики не прыгали, когда она появляется.
         self.ratio.setFixedHeight(self.ratio.fontMetrics().lineSpacing() + style.px(0.3))
 
-        # Две верхние строки: газ и начальные условия.
-        # Порядок элементов второго верхнего ряда и текст «Начальные скорости:» задаются здесь.
-        self.conditions = card(hbox(
-            self.gas.pair_group, label("Начальные скорости:"), self.gas.start,
-            self.gas.collisions, self.run.ensemble_box, None, spacing=style.px(.6),
-        ))
-        self.conditions.setFont(style.font(.9))
-        self.gas_card = card(self.gas)
-
-        # Сосуд и построение векторов находятся в одной системе экранных длин.
-        # Флажок скрывает дополнительное построение и легенду, но не стрелки возле выбранных частиц.
+        # Флажок управляет построением в сосуде, но не стрелками возле частиц.
         self.vector_toggle = QtWidgets.QCheckBox("Построение векторов")
+        self.vector_toggle.setFocusPolicy(QtCore.Qt.NoFocus)
         self.vector_toggle.setChecked(True)
         self.vector_toggle.toggled.connect(self.vectors.setVisible)
         self.vector_toggle.toggled.connect(self.legend.setVisible)
         self.vector_toggle.toggled.connect(self.on_display_options_changed)
+
+        # Две верхние строки: газ и начальные условия.
+        # Порядок элементов второго верхнего ряда и текст «Начальные скорости:» задаются здесь.
+        self.conditions_controls = QtWidgets.QWidget()
+        self.conditions_controls.setLayout(hbox(
+            self.gas.pair_group, label("Начальные скорости:"), self.gas.start,
+            spacing=style.px(.6),
+        ))
+        self.conditions_toggles = QtWidgets.QWidget()
+        self.conditions_toggles.setLayout(hbox(
+            self.gas.collisions, None, self.run.ensemble_box, None, self.vector_toggle,
+            spacing=style.px(.6),
+        ))
+        self.conditions_grid = QtWidgets.QGridLayout()
+        self.conditions_grid.setContentsMargins(0, 0, 0, 0)
+        self.conditions_grid.setSpacing(style.px(.6))
+        self.conditions_grid.setColumnStretch(1, 1)
+        self.conditions_grid.addWidget(self.conditions_controls, 0, 0)
+        self.conditions_grid.addWidget(self.conditions_toggles, 1, 0, 1, 2)
+        self._vector_control_row = 1
+        self.conditions = card(self.conditions_grid)
+        self.conditions.setFont(style.font(.9))
+        self.conditions.installEventFilter(self)
+        self.gas_card = card(self.gas)
+
+        # Сосуд и построение векторов находятся в одной системе экранных длин.
         self.box_card = card(self.box)
         self.box_card.setSizePolicy(QtWidgets.QSizePolicy.Preferred, QtWidgets.QSizePolicy.Ignored)
-        self.run_card = card(self.run, self.vector_toggle)
-        self.run_card.setSizePolicy(QtWidgets.QSizePolicy.Preferred, QtWidgets.QSizePolicy.Fixed)
+        self.run_card = card(self.run, spacing=style.px(.5))
+        self.run_card.setObjectName("runControls")
+        # Место вокруг крупных кнопок, не отнимающее высоту у правых графиков.
+        m = style.px(.55)
+        self.run_card.layout().setContentsMargins(m, m, m, m)
+        self.run_card.setSizePolicy(QtWidgets.QSizePolicy.Preferred, QtWidgets.QSizePolicy.Expanding)
         self.left = QtWidgets.QWidget()
         self.left.setLayout(vbox((self.box_card, 1), self.run_card, spacing=style.px(.5)))
 
@@ -118,20 +139,18 @@ class DemoPage(QtWidgets.QWidget):
             "Выключено: каждая панель подбирает свой диапазон.")
         # Меню остаётся доступно и в режиме «только графики».
         self.display_button = QtWidgets.QToolButton()
+        self.display_button.setObjectName("displayOptions")
         self.display_button.setText("Вид")
+        self.display_button.setFixedHeight(self.link_scales.sizeHint().height())
         self.display_button.setPopupMode(QtWidgets.QToolButton.InstantPopup)
         menu = QtWidgets.QMenu(self.display_button)
-        self.instant_action = menu.addAction("Мгновенные значения")
-        self.instant_action.setCheckable(True)
-        self.instant_action.setChecked(settings.SHOW_INSTANT_VALUES)
         self.projection_action = menu.addAction("Проекция на ось x")
         self.projection_action.setCheckable(True)
         self.projection_action.setChecked(settings.SHOW_VECTOR_PROJECTION)
         self.display_button.setMenu(menu)
-        self.display_button.setToolTip("Показать мгновенные числа и фиолетовую проекцию вектора")
-        for action in (self.instant_action, self.projection_action):
-            action.toggled.connect(self.on_display_options_changed)
-        self.history_caption = label(size=.85, shrinkable=True)
+        self.display_button.setToolTip("Показать фиолетовую проекцию вектора")
+        self.projection_action.toggled.connect(self.on_display_options_changed)
+        self.history_caption = label(size=1.0, shrinkable=True)
         self.middle = card(
             hbox(self.link_scales, self.display_button, (self.history_caption, 1), self.zoom_button,
                  spacing=style.px(.5)),
@@ -142,6 +161,8 @@ class DemoPage(QtWidgets.QWidget):
         self.body.setLayout(hbox(self.left, (self.middle, 1), spacing=style.px(.6)))
         self.body.installEventFilter(self)
         self.run_card.installEventFilter(self)
+        self.left.installEventFilter(self)
+        self.box_card.installEventFilter(self)
         self.footer = card(hbox(
             self.bins, self.memory, (self.ratio, 1), self.add_button, spacing=style.px(.7),
         ))
@@ -205,6 +226,7 @@ class DemoPage(QtWidgets.QWidget):
 
     # Обновить размеры кнопок и подписей при смене масштаба шрифта.
     def rescale_layout(self):
+        self.display_button.setFixedHeight(self.link_scales.sizeHint().height())
         self.ratio.setFixedHeight(self.ratio.fontMetrics().lineSpacing() + style.px(.3))
         side = self.add_button.sizeHint().height()
         self.zoom_button.setFixedSize(side, side)
@@ -224,10 +246,25 @@ class DemoPage(QtWidgets.QWidget):
         self.zoom_button.setToolTip("Вернуть сосуд и настройки" if zoomed
                                     else "Графики на весь экран (сосуд и настройки скрываются)")
 
+    def _place_vector_control(self):
+        """Три флажка занимают свободную ширину; на узком экране переходят в нижний ряд."""
+        margins = self.conditions.layout().contentsMargins()
+        available = self.conditions.width() - margins.left() - margins.right()
+        required = (self.conditions_controls.minimumSizeHint().width()
+                    + self.conditions_grid.spacing() + self.conditions_toggles.minimumSizeHint().width())
+        row = 0 if required <= available else 1
+        if row == self._vector_control_row:
+            return
+        self.conditions_grid.removeWidget(self.conditions_toggles)
+        self.conditions_grid.addWidget(self.conditions_toggles, row, 1 if row == 0 else 0,
+                                       1, 1 if row == 0 else 2)
+        self._vector_control_row = row
+
     # Для изменения доли сосуда на экране смотреть free_height, room и ограничитель .43 ниже.
     def _fit_box(self):
         """Сосуд квадратный: ширина левой колонки = высота места под сосудом,
         но не меньше, чем нужно кнопкам, и так, чтобы графикам осталось MIDDLE_MIN."""
+        self._place_vector_control()
         if not hasattr(self, "body") or self.left.isHidden():
             return
         gap = self.left.layout().spacing()
@@ -240,6 +277,9 @@ class DemoPage(QtWidgets.QWidget):
         height = max(1, min(width, free_height))
         if self.box_card.maximumHeight() != height:
             self.box_card.setMaximumHeight(height)
+        # После F11 ограничение уже обновлено, но дочерний layout ещё может
+        # хранить переходную высоту. Применяем её в той же подгонке.
+        self.left.layout().activate()
 
     # Оборачивает переход на другую страницу так, чтобы опыт не продолжался скрытым.
     def _leaving(self, go):
@@ -266,7 +306,6 @@ class DemoPage(QtWidgets.QWidget):
         if len(self.panels) >= MAX_PANELS:
             return
         panel = GraphPanel(obj, kind, closable=bool(self.panels))
-        panel.show_instant_value(self.instant_action.isChecked(), self.exp)
         panel.quantity_changed.connect(self.on_experiment_changed)
         panel.close_clicked.connect(lambda: self.remove_panel(panel))
         self.panels.append(panel)
@@ -374,6 +413,7 @@ class DemoPage(QtWidgets.QWidget):
         """Изменились газ, выбор молекул или графики: заново настроить масштабы и подписи."""
         self._cancel_frame()
         self.gas.sync_with(self.exp)
+        self._place_vector_control()
         self.configure_plots()
         self.refresh()
 
@@ -423,8 +463,7 @@ class DemoPage(QtWidgets.QWidget):
     def on_display_options_changed(self):
         """Только оформление: не отменяет кадр, не сбрасывает историю/гистограммы."""
         for panel in self.panels:
-            panel.show_instant_value(self.instant_action.isChecked(), self.exp)
-        self.configure_projection()
+            self.configure_projection()
         self.refresh(plots=False)
 
     # Показать текущие данные; plots=False обновляет только сосуд и векторы для более частой анимации.
@@ -437,7 +476,7 @@ class DemoPage(QtWidgets.QWidget):
             return
         self._last_plot_refresh = time.perf_counter()
         # Здесь редактируется обновляемая надпись «История: до … пс», сохраняя подстановку числа.
-        self.history_caption.setText("История: до %s пс" % style.fmt(exp.history_window, 1))
+        self.history_caption.setText("История: до %s у.е." % style.fmt(exp.history_window * units.TIME_FACTOR, 1))
         self.history_caption.setToolTip("Последние 3τ: окно пропорционально параметру «Память».")
         for panel in self.panels:
             panel.refresh(exp, self.run.fast)

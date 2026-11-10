@@ -26,10 +26,10 @@ class GasPanel(QtWidgets.QWidget):
         # В парах Choice второй элемент — текст кнопки, первый — ключ, используемый логикой программы.
         self.gas_mode = Choice(None, [(GAS_PURE, "Один газ"), (GAS_MIX, "Смесь A + B")])
         # ParamControl: подпись, минимум, максимум, значение. Температура и массы здесь — параметры презентации.
-        self.temperature = ParamControl("T, К", settings.TEMPERATURE_MIN, settings.TEMPERATURE_MAX, exp.temperature)
+        self.temperature = ParamControl("T, у.е.", settings.TEMPERATURE_MIN, settings.TEMPERATURE_MAX, exp.temperature)
         self.n_total = ParamControl("Частиц N", settings.N_MIN, settings.N_MAX, exp.n_total)
-        self.mass_a = ParamControl("mA, а.е.м.", settings.MASS_MIN, settings.MASS_MAX, exp.mass_a)
-        self.mass_b = ParamControl("mB, а.е.м.", settings.MASS_MIN, settings.MASS_MAX, exp.mass_b)
+        self.mass_a = ParamControl("mA, у.е.", settings.MASS_MIN, settings.MASS_MAX, exp.mass_a)
+        self.mass_b = ParamControl("mB, у.е.", settings.MASS_MIN, settings.MASS_MAX, exp.mass_b)
         self.n_b = ParamControl("Частиц B", 1, exp.n_total - 1, exp.n_b_mix)
         self.n_b.setToolTip("1 — в газе A одна «чужая» молекула B")
         self.pair = Choice(None, [("AA", "A – A"), ("AB", "A – B"), ("BB", "B – B")])

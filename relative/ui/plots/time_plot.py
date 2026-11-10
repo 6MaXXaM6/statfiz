@@ -17,9 +17,10 @@ class TimePlot(StaticPlot):
     участке — выглядит так же, а рисуется во много раз быстрее.
     """
 
-    # Здесь менять подпись «время t, пс», вид текущей точки и линии; цвета серых областей — в settings.py.
+    # Ось времени оставляем без текстовой подписи; числовые деления сохраняются.
     def __init__(self):
-        super().__init__(xlabel="время t, пс")
+        super().__init__()
+        self.value_factor = self.time_factor = 1.0
         self._history_key = None
         self.curve = self.plot(pen=pen(style.REL, settings.CURVE_LINE))
         self.live_tail = self.plot(pen=pen(style.REL, settings.CURVE_LINE))
@@ -39,10 +40,13 @@ class TimePlot(StaticPlot):
         self.mean_line = self.line(0, style.THEORY, width=0.1, dotted=True)
 
     # Получает вертикальную подпись и диапазон из GraphPanel; горизонтальная подпись задана в конструкторе.
-    def configure(self, axis_label, low, high):
+    def configure(self, axis_label, low, high, value_factor=1.0, time_factor=1.0):
         """axis_label — подпись оси значений с единицами, например "|v₁|, м/с"."""
         self.set_axis_label("left", axis_label)
-        self.setYRange(low, high, padding=0)
+        self.value_factor, self.time_factor = value_factor, time_factor
+        self._history_key = None
+        self.setYRange(low * value_factor, high * value_factor, padding=0)
+        self._reserve_axis_space()
 
     # Выбирает ломаную или интервальное представление истории и обновляет текущую отметку.
     def update_view(self, series, theory_mean=None, current=None):
@@ -53,18 +57,18 @@ class TimePlot(StaticPlot):
             dense = series.span > 1 or len(series.buckets) >= bins
             if dense and series.buckets:
                 buckets = series.summary(bins)
-                means = buckets[:, 6] / buckets[:, 5]
-                sigma = np.sqrt(np.maximum(buckets[:, 7] / buckets[:, 5] - means**2, 0))
-                tb = (buckets[:, 0] + buckets[:, 1]) * .5
-                self.low_edge.setData(tb, buckets[:, 2])
-                self.high_edge.setData(tb, buckets[:, 3])
+                means = buckets[:, 6] / buckets[:, 5] * self.value_factor
+                sigma = np.sqrt(np.maximum(buckets[:, 7] / buckets[:, 5] * self.value_factor**2 - means**2, 0))
+                tb = (buckets[:, 0] + buckets[:, 1]) * .5 * self.time_factor
+                self.low_edge.setData(tb, buckets[:, 2] * self.value_factor)
+                self.high_edge.setData(tb, buckets[:, 3] * self.value_factor)
                 self.spread_low.setData(tb, means - sigma)
                 self.spread_high.setData(tb, means + sigma)
                 self.average.setData(tb, means)
                 self.curve.setData([], [])
             else:
                 t, v = series.data()
-                self.curve.setData(t, v)
+                self.curve.setData(t * self.time_factor, v * self.value_factor)
             for item in (self.band, self.low_edge, self.high_edge, self.spread,
                          self.spread_low, self.spread_high, self.average):
                 item.setVisible(dense)
@@ -75,15 +79,16 @@ class TimePlot(StaticPlot):
         # При смене T/массы на паузе показываем мгновенный скачок, не добавляя
         # фиктивные измерения в историю и гистограмму.
         if recorded is not None and last is not None and recorded != last:
-            self.live_tail.setData([recorded[0], last[0]], [recorded[1], last[1]])
+            self.live_tail.setData(np.array([recorded[0], last[0]]) * self.time_factor,
+                                   np.array([recorded[1], last[1]]) * self.value_factor)
         else:
             self.live_tail.setData([], [])
-        self.dot.setData(*([[last[0]], [last[1]]] if last else [[], []]))
-        show_line_at(self.current, last[1] if last else None)
-        show_line_at(self.mean_line, theory_mean)
+        self.dot.setData(*([[last[0] * self.time_factor], [last[1] * self.value_factor]] if last else [[], []]))
+        show_line_at(self.current, last[1] * self.value_factor if last else None)
+        show_line_at(self.mean_line, None if theory_mean is None else theory_mean * self.value_factor)
         # Ось времени от начала набора статистики: график не бежит, а "схлопывается".
         if last is not None:
             start = series.start_time() if series.start_time() is not None else last[0]
             if series.window is not None:
                 start = max(start, last[0] - series.window)
-            self.setXRange(start, max(last[0], start + 1e-3), padding=0)
+            self.setXRange(start * self.time_factor, max(last[0], start + 1e-3) * self.time_factor, padding=0)

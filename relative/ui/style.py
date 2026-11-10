@@ -101,41 +101,85 @@ def init_style(app, size=None):
 
     pg.setConfigOptions(antialias=True, background="w", foreground="k")
 
+    # КАРТА КНОПОК (тексты и действия задаются на страницах, здесь только оформление):
+    # QPushButton — общая основа: навигация, Пауза/Стоп, Связать шкалы, Добавить график и т.д.
+    # #primary — зелёный Старт в опыте: DemoPage вызывает btn_start.setObjectName("primary").
+    # #big — четыре кнопки главного меню: TitlePage создаёт button(..., name="big").
+    # #big[primary="true"] — синяя Презентация: setProperty("primary", True), это не имя #primary.
+    # [tab="true"] — вариант Choice(..., tabs=True), если такой переключатель используется.
+    # QToolButton#overlay — Повернуть распределение: имя задано в ui/widgets.overlay_button().
+    # QToolButton#displayOptions — Вид: рамка и отступы совпадают с QPushButton.
+    # Правило #overlay её не выбирает; DemoPage выравнивает высоту, ширина — по тексту.
+    # Кнопка разворота графиков — QPushButton с иконкой: общие правила и состояние :checked.
+    # #имя выбирает objectName; [свойство="значение"] — setProperty; :состояние — состояние Qt.
+    # Обычное нажатие само по себе не даёт :checked: нужен setCheckable(True).
+    # Более конкретные правила дополняют/переопределяют общие свойства того же элемента.
+    # Внутри строки QSS комментарии пишутся как /* ... */, а не через Python-символ #.
     # Общие стили: QPushButton — кнопки, QFrame#card — карточки, QSlider — ползунки; изменения видны на всех страницах.
     app.setStyleSheet(
         """
         QMainWindow { background: %(page)s; }
         QWidget { color: #111111; }
         QWidget#experimentHeader { background: #203b5b; border-radius: %(rc)dpx; }
-        QWidget#experimentHeader QLabel { color: white; }
+        QWidget#experimentHeader QLabel, QWidget#experimentHeader QCheckBox { color: white; }
         QFrame#plotHeader { background: #edf2f7; border-radius: %(r)dpx; }
         QFrame#card { background: #ffffff; border: 1px solid #d3dae6; border-radius: %(rc)dpx; }
+        QFrame#runControls { background: #ffffff; border: 1px solid #d3dae6; border-radius: %(rc)dpx; }
         QLabel#section { color: #1c3f7a; font-weight: bold; }
-        QPushButton {
+        /* Общий вид обычных кнопок на всех страницах.
+           background — заливка; border — толщина, тип и цвет рамки;
+           border-radius — скругление; padding — внутреннее пространство вокруг текста.
+           Два значения padding: сверху/снизу и слева/справа. */
+        /* Меню Вид получает те же рамку и отступы, что соседняя кнопка Связать шкалы. */
+        QPushButton, QToolButton#displayOptions {
             background: #eef2f8; border: 2px solid #8a9bb8; border-radius: %(r)dpx;
             padding: %(p)dpx %(p2)dpx;
         }
-        QPushButton:hover { background: #dde6f5; }
+        /* Мышь над кнопкой: светлее фон. Это не нажатие и не изменение её действия. */
+        QPushButton:hover, QToolButton#displayOptions:hover { background: #dde6f5; }
+        /* У управления опытом слева больше внутренние отступы и удобнее область нажатия. */
+        QFrame#runControls QPushButton { padding: %(run_p)dpx %(run_p2)dpx; }
+        /* Включённая кнопка-переключатель: выбранный газ/режим, Связать шкалы,
+           разворот графиков. Цвет текста — color, цвет рамки — border-color. */
         QPushButton:checked { background: #2d5fb3; color: white; border-color: #1c3f7a; }
+        /* Недоступная кнопка, отключённая через setEnabled(False), например Старт при расчёте. */
         QPushButton:disabled { color: #999999; border-color: #cccccc; }
+        /* Оформление кнопок Choice в режиме tabs=True: вместо полной рамки — нижняя линия.
+           Сам механизм единственного выбора обеспечивает QButtonGroup в ui/widgets.py. */
         QPushButton[tab="true"] {
             background: transparent; border: none; border-radius: 0; color: #4a5568;
             border-bottom: %(tb)dpx solid #d3dae6; font-weight: bold; padding: %(p)dpx %(p)dpx;
         }
+        /* Наведение на кнопку-вкладку. */
         QPushButton[tab="true"]:hover { background: #eef2f8; }
+        /* Выбранная вкладка: синий текст, светлый фон, синяя нижняя граница. */
         QPushButton[tab="true"]:checked { color: #1c3f7a; background: #e3ebf8; border-bottom-color: #2d5fb3; }
+        /* Служебная кнопка Повернуть у гистограммы, включая кнопку в шапке GraphPanel.
+           QToolButton — другой тип кнопки, поэтому правила QPushButton её не оформляют.
+           rgba(..., 220) задаёт почти непрозрачный белый фон; font-size — размер текста. */
         QToolButton#overlay {
             background: rgba(255, 255, 255, 220); border: 2px solid #8a9bb8; border-radius: %(r)dpx;
             font-size: %(ob)dpx; font-weight: bold; padding: 0px %(p)dpx;
         }
+        /* Наведение на служебную кнопку Повернуть. */
         QToolButton#overlay:hover { background: #dde6f5; }
+        /* Презентация, Теория по теме, Авторы, Выход на главной странице.
+           big — итоговый размер текста, bp — внутренний отступ, br — радиус углов.
+           Границы размера 18–26 px и значения bp/br вычисляются в dict ниже.
+           Размер/ширину самого меню дополнительно ограничивает TitlePage.rescale_fonts(). */
         QPushButton#big {
             font-size: %(big)dpx; font-weight: bold; padding: %(bp)dpx;
             border-width: 1px; border-radius: %(br)dpx;
         }
+        /* Только Старт в опыте: objectName равен primary. Меняй эти цвета,
+           чтобы перекрасить Старт, сохранив цвет основной кнопки главного меню. */
         QPushButton#primary { background: #197c78; color: white; border-color: #197c78; }
+        /* Более тёмный зелёный при наведении на Старт. */
         QPushButton#primary:hover { background: #12635f; }
+        /* Только Презентация на главной: имя big И свойство primary=True.
+           Остальные три кнопки имеют имя big, но это свойство у них False. */
         QPushButton#big[primary="true"] { background: #2859a3; color: white; border-color: #2859a3; }
+        /* Более тёмный синий при наведении на Презентацию. */
         QPushButton#big[primary="true"]:hover { background: #1d4786; }
         QSpinBox, QDoubleSpinBox, QComboBox {
             border: 2px solid #8a9bb8; border-radius: %(r)dpx; padding: 2px; background: #ffffff; color: #111111;
@@ -148,8 +192,12 @@ def init_style(app, size=None):
         QScrollArea { border: none; }
         QTextBrowser { border: none; }
         """
+        # Подстановки для QSS: r — радиус, p/p2 — отступы, big — шрифт меню,
+        # bp/br — отступ/радиус кнопок меню, tb — линия вкладки, ob — шрифт Повернуть.
+        # px(...) умножает долю на BASE. Литералы вроде br=8 уже заданы в пикселях.
         % dict(
             r=px(0.3), p=px(0.25), p2=px(0.5),
+            run_p=px(.45), run_p2=px(.65),
             big=max(18, min(26, px(settings.MENU_BUTTON_FONT))), bp=min(10, px(0.45)), br=8,
             gh=px(0.4), gr=px(0.2), hw=px(1.0), hm=px(0.35), hr=px(0.5),
             cb=px(0.9), rc=px(0.4), tb=px(0.2), ob=px(0.9),

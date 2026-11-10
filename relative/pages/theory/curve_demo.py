@@ -7,7 +7,7 @@ from pages.theory.formula_browser import FormulaReadout
 from model import theory as tf
 from model.physics import K_B
 from model.experiment import ENERGY_UNIT
-from ui import labels, style
+from ui import labels, style, units
 from ui.plots.base import StaticPlot, pen
 from ui.widgets import ParamControl, button, hbox, vbox
 
@@ -30,9 +30,9 @@ class CurveDemo(QtWidgets.QWidget):
         two = variant in ("relative", "mixture")
         # Диапазоны и старт здесь самостоятельные: START_TEMPERATURE презентации на них не влияет.
         # Если меняется старт, поправить также reset(); серый эталон в update_view — отдельно.
-        self.temperature = ParamControl("Температура T, К", 50, 1500, 300)
-        self.mass_1 = ParamControl("Масса m₁, а.е.м." if two else "Масса m, а.е.м.", 1, 200, 28)
-        self.mass_2 = ParamControl("Масса m₂, а.е.м.", 1, 200, self.start_m2)
+        self.temperature = ParamControl("Температура T, у.е.", 50, 1500, 300)
+        self.mass_1 = ParamControl("Масса m₁, у.е." if two else "Масса m, у.е.", 1, 200, 28)
+        self.mass_2 = ParamControl("Масса m₂, у.е.", 1, 200, self.start_m2)
         self.mass_2.setVisible(two)
         self.plot = StaticPlot()
         self.plot.setMinimumHeight(style.px(12))
@@ -73,21 +73,22 @@ class CurveDemo(QtWidgets.QWidget):
             return
         t, m1, m2 = self.temperature.value(), self.mass_1.value(), self.mass_2.value()
         low = -self.high if self.kind == tf.PROJECTION else 0
+        display_factor = units.value_factor(self.kind)
         xs = np.linspace(low, self.high, 300)
         s = tf.sigma_for(m1, t)
         # Кортеж кривой: (масштаб данных, цвет, пунктир, надпись в легенде).
-        curves = [(tf.sigma_for(28, 300), "#9a9a9a", True, "T = 300 К, m = 28")]
+        curves = [(tf.sigma_for(28, 300), "#9a9a9a", True, "T = 300 у.е., m = 28")]
         # Раздел 2: текст под графиком и метки −σ/+σ редактируются в этой ветке.
         if self.variant == "projection":
             curves += [(s, style.PROJ, False, "f(vₓ)")]
             markers = [(-s, style.PROJ, "−σ"), (s, style.PROJ, "+σ")]
-            text = f"{SIGMA} = <b>{style.fmt(s)}</b> м/с &nbsp; ⟨vₓ⟩ = 0 &nbsp; D = σ² = <b>{style.fmt(s*s/1e3,1)}</b>·10³ (м/с)²"
+            text = f"{SIGMA} = <b>{style.fmt(s*display_factor,2)}</b> у.е. &nbsp; ⟨vₓ⟩ = 0 &nbsp; D = σ² = <b>{style.fmt(s*s*display_factor**2,2)}</b> (у.е.)²"
         # Раздел 3: здесь названия характерных скоростей и строка их значений.
         elif self.variant == "modulus":
             mean, rms = tf.mean(tf.MODULUS, s), s*np.sqrt(2)
             curves += [(s, style.REL, False, "f(|v|)")]
             markers = [(s, style.MOL2, "vвер"), (mean, style.THEORY, "⟨v⟩"), (rms, style.PROJ, "√⟨v²⟩")]
-            text = f"{VMP} = <b>{style.fmt(s)}</b> &nbsp; ⟨v⟩ = <b>{style.fmt(mean)}</b> &nbsp; √⟨v²⟩ = <b>{style.fmt(rms)}</b> м/с"
+            text = f"{VMP} = <b>{style.fmt(s*display_factor,2)}</b> &nbsp; ⟨v⟩ = <b>{style.fmt(mean*display_factor,2)}</b> &nbsp; √⟨v²⟩ = <b>{style.fmt(rms*display_factor,2)}</b> у.е."
         # Разделы 4 и 6 используют общий блок; правка подписи здесь затронет оба.
         elif self.variant in ("relative", "mixture"):
             mu = tf.reduced_mass(m1, m2)
@@ -97,36 +98,36 @@ class CurveDemo(QtWidgets.QWidget):
             mean1, meanr = tf.mean(tf.MODULUS,s), tf.mean(tf.MODULUS,sr)
             markers = [(mean1,style.MOL1,"⟨|v₁|⟩"), (meanr,style.REL,"⟨|vотн|⟩")]
             ratio = "√2 ≈ 1.414" if m1 == m2 else f"{SCALE} = {np.sqrt(m1/mu):.3f}"
-            text = f"{MU} = <b>{style.fmt(mu,1)}</b> а.е.м.<br>⟨|v₁|⟩ = {style.fmt(mean1)}, ⟨|v₂|⟩ = {style.fmt(tf.mean(tf.MODULUS,s2))}, ⟨|vотн|⟩ = <b>{style.fmt(meanr)}</b> м/с<br>{RATIO} = <b>{ratio}</b>"
+            text = f"{MU} = <b>{style.fmt(mu,1)}</b> у.е.<br>⟨|v₁|⟩ = {style.fmt(mean1*display_factor,2)}, ⟨|v₂|⟩ = {style.fmt(tf.mean(tf.MODULUS,s2)*display_factor,2)}, ⟨|vотн|⟩ = <b>{style.fmt(meanr*display_factor,2)}</b> у.е.<br>{RATIO} = <b>{ratio}</b>"
         else:
             # Раздел 5: подписи энергии и пояснение о независимости распределения от массы.
             s = K_B*t/ENERGY_UNIT
-            curves = [(K_B*300/ENERGY_UNIT,"#9a9a9a",True,"T = 300 К"), (s,style.THEORY,False,"f(E)")]
+            curves = [(K_B*300/ENERGY_UNIT,"#9a9a9a",True,"T = 300 у.е."), (s,style.THEORY,False,"f(E)")]
             markers = [(s,style.REL,"⟨E⟩ = kT")]
-            text = f"kT = <b>{style.fmt(s,2)}</b>·10⁻²¹ Дж &nbsp; ⟨E⟩ = kT &nbsp; D = (kT)²<br>Масса m = {m1} а.е.м. в формулу не входит — подвигайте её движок."
+            text = f"kT = <b>{style.fmt(s*display_factor,2)}</b> у.е. &nbsp; ⟨E⟩ = kT &nbsp; D = (kT)²<br>Масса m = {m1} у.е. в формулу не входит — подвигайте её движок."
         for item in self.items:
             self.plot.removeItem(item)
         self.items = []
         self.legend.clear()
-        densities = [tf.pdf(self.kind,xs,c[0]) for c in curves]
+        densities = [tf.pdf(self.kind,xs,c[0])/display_factor for c in curves]
         peak = max(float(y.max()) for y in densities)
         exponent = 0 if self.kind == tf.ENERGY else int(np.floor(np.log10(peak)))
         factor = 10.**(-exponent)
         for (_,color,dashed,name), ys in zip(curves,densities):
-            self.items.append(self.plot.plot(xs, ys*factor, pen=pen(color,.1 if dashed else .16,dashed),name=name))
+            self.items.append(self.plot.plot(xs*display_factor, ys*factor, pen=pen(color,.1 if dashed else .16,dashed),name=name))
         for row,(x,color,text_label) in enumerate(markers):
-            line = pg.InfiniteLine(x, angle=90, pen=pen(color,.08,True))
+            line = pg.InfiniteLine(x*display_factor, angle=90, pen=pen(color,.08,True))
             self.plot.addItem(line)
             text_item = pg.TextItem(text_label,color=color,anchor=(0,0))
             text_item.setFont(style.font(.8))
-            text_item.setPos(x,peak*factor*(1.12-row*.09))
+            text_item.setPos(x*display_factor,peak*factor*(1.12-row*.09))
             self.plot.addItem(text_item)
             self.items.extend((line,text_item))
         # Горизонтальная шкала сохраняется до «Подогнать масштаб»; здесь назначаются оси и подписи.
-        self.plot.setXRange(low,self.high,padding=0)
+        self.plot.setXRange(low*display_factor,self.high*display_factor,padding=0)
         self.plot.setYRange(0,peak*factor*1.15,padding=0)
         value = "E" if self.kind == tf.ENERGY else "vₓ" if self.kind == tf.PROJECTION else "|v|"
         power = f"10{style.sup(exponent)} " if exponent else ""
         self.plot.set_axis_label("bottom",f"{value}, {labels.unit(self.kind)}")
-        self.plot.set_axis_label("left",f"f, {power}{labels.density_unit(self.kind)}")
+        self.plot.set_axis_label("left",f"Плотность вероятности<br>f, {power}{labels.density_unit(self.kind)}")
         self.readout.setText(text)

@@ -59,7 +59,8 @@ class HistPlot(StaticPlot):
         self.flash_bars = None
         self.sideways = None
         self.value_label = ""
-        self.density_unit = "с/м"
+        self.density_unit = "у.е.⁻¹"
+        self.value_factor = 1.0
         self.low, self.high = 0.0, 1.0
         self.exponent = 0
         self.top = 1.0
@@ -110,7 +111,7 @@ class HistPlot(StaticPlot):
 
     # --- настройка под выбранную величину ---
     # Запоминает подписи и теорию; запас шкалы задаётся HIST_HEADROOM в settings.py.
-    def configure(self, value_label, x, pdf, other_pdf=None, peak=None, density_unit="с/м", rescale=True):
+    def configure(self, value_label, x, pdf, other_pdf=None, peak=None, density_unit="у.е.⁻¹", rescale=True, value_factor=1.0):
         """value_label — подпись оси значений с единицами ("|v₁|, м/с");
         x, pdf — теоретическая кривая; other_pdf — вторая кривая пунктиром;
         peak — максимум плотности для масштаба оси (по умолчанию — максимум pdf);
@@ -119,6 +120,12 @@ class HistPlot(StaticPlot):
         """
         self.value_label = value_label
         self.density_unit = density_unit
+        # При x*=a*x плотность f*=f/a: площадь и вероятность сохраняются.
+        self.value_factor = value_factor
+        x = x * value_factor
+        pdf = pdf / value_factor
+        other_pdf = None if other_pdf is None else other_pdf / value_factor
+        peak = None if peak is None else peak / value_factor
         self.low, self.high = x[0], x[-1]
         peak = pdf.max() if peak is None else peak
         self.exponent = density_exponent(peak) if rescale else 0
@@ -132,18 +139,17 @@ class HistPlot(StaticPlot):
     def _density_factor(self):
         return 10.0 ** (-self.exponent)
 
-    # Здесь собирается подпись f и выбирается, на какой оси величина, а на какой плотность.
+    # Ось плотности без текстовой подписи; подпись выбранной величины сохраняется.
     def _apply_axes(self):
-        power = "10%s " % style.sup(self.exponent) if self.exponent else ""
-        density = "f, %s%s" % (power, self.density_unit)  # f — плотность вероятности
         value = self.value_label
-        self.set_axis_label("bottom", density if self.sideways else value)
+        self.set_axis_label("bottom", "" if self.sideways else value)
         if not self.sideways:
-            self.set_axis_label("left", density)
+            self.set_axis_label("left", "")
         x_min, y_min = self._xy(self.low, 0.0)
         x_max, y_max = self._xy(self.high, self.top)
         self.setXRange(x_min, x_max, padding=0)
         self.setYRange(y_min, y_max, padding=0)
+        self._reserve_axis_space()
 
     # Отображает основную теорию и необязательную дополнительную пунктирную кривую.
     def _draw_curves(self):
@@ -160,14 +166,14 @@ class HistPlot(StaticPlot):
     # Обновляет столбики; треугольник у края означает превышение выбранной шкалы плотности.
     def update_view(self, hist, current=None, highlight=False, show_mean=False):
         """highlight=True — подсветить столбик, в который попало текущее значение."""
-        dens = hist.density() * self._density_factor()
+        dens = hist.density() / self.value_factor * self._density_factor()
         shown = np.minimum(dens, self.top)
-        self.bars.setOpts(**self._bar_opts(hist.centers, hist.width, shown))
+        self.bars.setOpts(**self._bar_opts(hist.centers * self.value_factor, hist.width * self.value_factor, shown))
         over = dens > self.top
-        self.clipped.setData(*self._xy(hist.centers[over], np.full(over.sum(), self.top * 0.97)))
+        self.clipped.setData(*self._xy(hist.centers[over] * self.value_factor, np.full(over.sum(), self.top * 0.97)))
         self._update_flash(hist, shown, current if highlight else None)
-        show_line_at(self.current, current)
-        show_line_at(self.exp_mean, hist.mean() if show_mean else None)
+        show_line_at(self.current, None if current is None else current * self.value_factor)
+        show_line_at(self.exp_mean, hist.mean() * self.value_factor if show_mean else None)
 
     # Подсветка нового измерения; её цвет — COLOR_HILITE, затухание — FLASH_DECAY.
     def _update_flash(self, hist, heights, value):
@@ -186,4 +192,4 @@ class HistPlot(StaticPlot):
                 color = QtGui.QColor(style.HILITE)
                 color.setAlphaF(float(alpha))
                 brushes.append(pg.mkBrush(color))
-            self.flash_bars.setOpts(brushes=brushes, **self._bar_opts(hist.centers[lit], hist.width, heights[lit]))
+            self.flash_bars.setOpts(brushes=brushes, **self._bar_opts(hist.centers[lit] * self.value_factor, hist.width * self.value_factor, heights[lit]))

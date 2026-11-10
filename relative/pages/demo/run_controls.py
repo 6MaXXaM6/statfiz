@@ -39,6 +39,7 @@ class RunControls(QtWidgets.QWidget):
     # Надписи кнопок меняются ниже; начальный темп и флажок ансамбля берутся из settings.py.
     def __init__(self):
         super().__init__()
+        self.setFont(style.font(1.05))
         self.state = STOPPED
         self._frame_started = None
         self.timer = QtCore.QTimer(self)
@@ -51,6 +52,9 @@ class RunControls(QtWidgets.QWidget):
         self.btn_pause = button("❚❚  Пауза", self.toggle_pause, size=settings.RUN_BUTTON_FONT, bold=True)
         self.btn_stop = button("■  Стоп", self.stop, size=settings.RUN_BUTTON_FONT, bold=True)
         self.mode = Choice(None, [("slow", "Медленно"), ("fast", "Быстро")])
+        # Свободная высота левой колонки увеличивает кнопки, а не пустые промежутки.
+        for control in (self.btn_start, self.btn_pause, self.btn_stop, *self.mode.buttons.values()):
+            control.setSizePolicy(QtWidgets.QSizePolicy.Expanding, QtWidgets.QSizePolicy.Expanding)
         self.mode.changed.connect(self._on_mode)
         # START_SPEED — номер позиции в SLOW_FACTORS, а не скорость молекулы в м/с.
         self.speed = ParamControl("Темп", 1, len(SLOW_FACTORS), settings.START_SPEED, show_number=False)
@@ -64,7 +68,7 @@ class RunControls(QtWidgets.QWidget):
         self.setLayout(vbox(
             hbox(self.btn_start, self.btn_pause, self.btn_stop),
             hbox((self.mode, 2), (self.speed, 3)),
-            spacing=style.px(0.2)))
+            spacing=style.px(0.5)))
         self._update_buttons()
 
     # Проверка внутреннего ключа режима; переименовывать можно надпись «Быстро», а ключ fast сохранять.

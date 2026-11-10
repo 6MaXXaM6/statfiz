@@ -17,7 +17,7 @@ from main import MainWindow
 from model.experiment import Experiment
 from pages.demo.graph_panel import QUANTITIES, stats_text
 from pages.demo.readouts import significant, stats_ready
-from ui import style
+from ui import style, units
 from tools.layout_check import problems, plot_areas
 
 
@@ -99,7 +99,8 @@ def test_statistics_throttle_pause_and_parameter_changes(win, monkeypatch):
     assert [p.stats.text() for p in d.panels] == old_stats
     assert d.ratio.text() == old_ratio
     for panel in d.panels:
-        assert panel.hist_plot.current.value() == pytest.approx(d.exp.current_value(*panel.quantity))
+        assert panel.hist_plot.current.value() == pytest.approx(
+            d.exp.current_value(*panel.quantity) * units.value_factor(panel.quantity[1]))
     now[0] += .02
     d.refresh(force_stats=False)
     assert len(calls) == 4
@@ -118,7 +119,7 @@ def test_statistics_throttle_pause_and_parameter_changes(win, monkeypatch):
     assert d.panels[0].stats.text() == stats_text(d.exp, *d.panels[0].quantity)
     d.panels[1].show_quantity('single', 'energy')
     assert d.panels[1].stats.text() == stats_text(d.exp, 'single', 'energy')
-    assert '10⁻²¹ Дж' in d.panels[1].stats.toolTip()
+    assert '(у.е.)²' in d.panels[1].stats.toolTip()
 
 
 @pytest.mark.parametrize('mode,ensemble', [('pure', False), ('pure', True), ('mix', False), ('mix', True)])
@@ -137,31 +138,24 @@ def test_display_switches_preserve_all_experiment_data_and_rng(win, app, mode, e
     for index in range(8):
         before = pickle.dumps(d.exp)
         d._frame_remaining = .123  # имитация незавершённого кадра: флажок не должен отменять его
-        d.instant_action.setChecked(index % 2 == 0)
         d.projection_action.setChecked(index % 3 != 0)
         d.vector_toggle.setChecked(index % 4 != 0)
         assert d._frame_remaining == .123
         d._frame_remaining = None
         assert pickle.dumps(d.exp) == before
-        assert all(p.value.isVisible() == d.instant_action.isChecked() for p in d.panels)
-        for p in d.panels:
-            assert p.value.text().startswith('= <b>')
         d.exp.advance(17)
         reference.advance(17)
         d.refresh()
         assert pickle.dumps(d.exp) == pickle.dumps(reference)
-    # Добавленная заново панель наследует текущую настройку чисел.
-    d.instant_action.setChecked(True)
+    # Добавленная заново панель не меняет состояние опыта.
     d.remove_panel(d.panels[1])
     d.add_next_panel()
     app.processEvents()
-    assert d.panels[1].value.isVisible()
     assert pickle.dumps(d.exp) == pickle.dumps(reference)
 
 
 def test_projection_optional_and_available_for_either_panel(win):
     d = win.demo
-    assert not d.instant_action.isChecked()
     assert not d.projection_action.isChecked()
     assert not d.projection_action.isEnabled()
     for panel, obj in zip(d.panels, ['pair', 'single']):
@@ -199,33 +193,28 @@ def test_layout_both_panels_rotation_zoom_and_numbers(win, app, size):
     d.exp.advance(120)
     d.refresh()
     QTest.qWait(80)
-    for instant in (False, True):
-        d.instant_action.setChecked(instant)
-        for zoom in (False, True):
-            d.zoom_button.setChecked(zoom)
-            d.toggle_graphs_zoom()
-            # Все величины в обеих панелях, поочерёдный поворот каждой.
-            for index, quantity in enumerate(QUANTITIES):
-                d.panels[0].show_quantity(*quantity)
-                d.panels[1].show_quantity(*QUANTITIES[-index-1])
-                panel = d.panels[index % 2]
-                panel.rotate()
-                app.processEvents()
-                assert not problems(win)
-                assert d.display_button.isVisible()
-                for p in d.panels:
-                    assert p.header.isAncestorOf(p.stats)
-                    assert p.stats.width() >= p.stats.sizeHint().width()
-                    assert p.stats.height() >= p.stats.sizeHint().height()
-                    assert p.hist_plot.height() > 80
-                    if p.time_plot.isVisible():
-                        assert p.time_plot.height() > 80
-                    if instant:
-                        assert p.value.width() >= p.value.sizeHint().width()
-                panel.rotate()
-                app.processEvents()
+    for zoom in (False, True):
+        d.zoom_button.setChecked(zoom)
+        d.toggle_graphs_zoom()
+        # Все величины в обеих панелях, поочерёдный поворот каждой.
+        for index, quantity in enumerate(QUANTITIES):
+            d.panels[0].show_quantity(*quantity)
+            d.panels[1].show_quantity(*QUANTITIES[-index-1])
+            panel = d.panels[index % 2]
+            panel.rotate()
+            app.processEvents()
+            assert not problems(win)
+            assert d.display_button.isVisible()
+            for p in d.panels:
+                assert p.header.isAncestorOf(p.stats)
+                assert p.stats.width() >= p.stats.sizeHint().width()
+                assert p.stats.height() >= p.stats.sizeHint().height()
+                assert p.hist_plot.height() > 80
+                if p.time_plot.isVisible():
+                    assert p.time_plot.height() > 80
+            panel.rotate()
+            app.processEvents()
     # Значения меняются, геометрия графиков — нет.
-    d.instant_action.setChecked(False)
     app.processEvents()
     before = plot_areas(d)
     for _ in range(5):
@@ -277,7 +266,6 @@ def test_readouts_at_parameter_extremes(win, app, mode, n, mass_a, mass_b, tempe
     d.exp.set_memory(memory)
     d.exp.advance(settings.STATS_MIN_STEPS)
     d.on_experiment_changed()
-    d.instant_action.setChecked(True)
     for quantity in QUANTITIES:
         for panel in d.panels:
             panel.show_quantity(*quantity)
@@ -286,6 +274,5 @@ def test_readouts_at_parameter_extremes(win, app, mode, n, mass_a, mass_b, tempe
             assert panel.stats.text() == stats_text(d.exp, *quantity)
             assert 'Набор статистики' not in panel.stats.text()
             assert panel.stats.width() >= panel.stats.sizeHint().width()
-            assert panel.value.width() >= panel.value.sizeHint().width()
             assert not problems(win)
             panel.rotate()

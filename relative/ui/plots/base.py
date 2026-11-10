@@ -77,11 +77,18 @@ class StaticPlot(pg.PlotWidget):
         # Полная высота rich text включает нижние индексы и степени.
         left_label = left.label.boundingRect().height() if left.label.isVisible() else 0
         bottom_label = bottom.label.boundingRect().height() if bottom.label.isVisible() else 0
-        gap = 8 + style.px(.4)
-        left.setWidth(max(style.px(AXIS_WIDTH),
-                          metrics.horizontalAdvance("−10000") + left_label + gap))
-        bottom.setHeight(max(style.px(AXIS_HEIGHT),
-                             metrics.height() + bottom_label + gap))
+        # Резервируем место под реальные деления, а не под постоянное «−10000»:
+        # при шкале 2…16 такой запас оставлял большую дыру рядом с подписью.
+        low, high = self.getViewBox().viewRange()[1]
+        ticks = left.tickValues(low, high, max(1, self.height()))
+        texts = [text for spacing, values in ticks
+                 for text in left.tickStrings(values, left.autoSIPrefixScale, spacing)]
+        numbers_width = max((metrics.horizontalAdvance(text) for text in texts), default=0)
+        left.setWidth(max(style.px(AXIS_WIDTH), numbers_width + left_label + 10))
+        # Без подписи не оставляем пустое место под две строки текста.
+        bottom_min = style.px(AXIS_HEIGHT) if bottom.label.isVisible() else 0
+        bottom.setHeight(max(bottom_min,
+                             metrics.height() + bottom_label + 6))
 
     # Назначает подпись оси; сами слова/обозначения обычно приходят из ui/labels.py.
     def set_axis_label(self, axis, text):

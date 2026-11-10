@@ -124,9 +124,12 @@ def test_energy_pdf_is_normalised():
     assert tf.mean(tf.ENERGY, kt) == kt and tf.variance(tf.ENERGY, kt) == kt ** 2
 
 
-def test_mean_energy_is_kT_in_equilibrium():
+def test_mean_energy_is_kT_in_equilibrium(monkeypatch):
     """В двумерном газе средняя кинетическая энергия молекулы равна kT (две степени свободы)."""
     from model.experiment import ENERGY_UNIT, SINGLE, Experiment
+    import settings
+    # Равновесие проверяем на большой выборке независимо от стартового N в UI.
+    monkeypatch.setattr(settings, 'START_N', 150)
     exp = Experiment(seed=5)
     exp.ensemble = True
     exp.advance(3000)
@@ -165,8 +168,9 @@ def test_memory_setting_keeps_statistics():
     exp.advance(300)
     hist = exp.hist[PAIR, tf.MODULUS]
     total, tau = hist.total, exp.memory_time
+    old_memory = exp.memory_collisions
     exp.set_memory(30)
-    assert np.isclose(hist.total, total) and np.isclose(exp.memory_time, tau / 10)
+    assert np.isclose(hist.total, total) and np.isclose(exp.memory_time, tau * 30 / old_memory)
 
 
 def test_beam_relaxes_only_with_collisions():

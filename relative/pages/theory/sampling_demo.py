@@ -5,7 +5,7 @@ import settings
 from pages.theory.formula_browser import FormulaReadout
 from model import theory as tf
 from model.stats import Histogram
-from ui import style
+from ui import style, units
 from ui.plots.hist_plot import HistPlot
 from ui.widgets import button, hbox, vbox
 
@@ -27,8 +27,9 @@ class SamplingDemo(QtWidgets.QWidget):
         self.plot.rotate_button.hide()
         self.plot.setMinimumHeight(style.px(12))
         xs = np.linspace(low, high, 301)
-        self.plot.configure("|v|, м/с", xs, tf.pdf(tf.MODULUS, xs, self.sigma),
-                            peak=tf.peak(tf.MODULUS, self.sigma))
+        self.plot.configure("|v|, у.е.", xs, tf.pdf(tf.MODULUS, xs, self.sigma),
+                            peak=tf.peak(tf.MODULUS, self.sigma), rescale=False,
+                            value_factor=units.value_factor(tf.MODULUS))
         self.readout = FormulaReadout()
         self.auto_button = button("▶ Набирать", checkable=True)
         self.timer = QtCore.QTimer(self)
@@ -65,4 +66,4 @@ class SamplingDemo(QtWidgets.QWidget):
         distance = np.sum(np.abs(self.hist.density()-tf.pdf(tf.MODULUS,self.hist.centers,self.sigma)))*self.hist.width
         error = style.fmt(distance,3) if self.hist.total else "—"
         # Числа подставляются автоматически; при смене слов сохранить выражения в фигурных скобках.
-        self.readout.setText(f"N = <b>{style.fmt(self.hist.total)}</b> отсчётов &nbsp; ⟨|v|⟩ = <b>{style.fmt(self.hist.mean())}</b> м/с (теор. {style.fmt(tf.mean(tf.MODULUS,self.sigma))})<br>отличие от теории L1 = <b>{error}</b> (≈ {ERROR_SCALE}: чтобы уменьшить вдвое, нужно вчетверо больше отсчётов)")
+        self.readout.setText(f"N = <b>{style.fmt(self.hist.total)}</b> отсчётов &nbsp; ⟨|v|⟩ = <b>{style.fmt(self.hist.mean()*units.value_factor(tf.MODULUS),2)}</b> у.е. (теор. {style.fmt(tf.mean(tf.MODULUS,self.sigma)*units.value_factor(tf.MODULUS),2)})<br>отличие от теории L1 = <b>{error}</b> (≈ {ERROR_SCALE}: чтобы уменьшить вдвое, нужно вчетверо больше отсчётов)")

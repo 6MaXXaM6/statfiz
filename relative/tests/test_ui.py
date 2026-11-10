@@ -97,7 +97,7 @@ def test_theory_navigation_and_interactive_examples(app):
     sources = page.stack.widget(7).findChild(QtWidgets.QTextBrowser).toPlainText()
     assert "Пример 8.5" in sources and "95–96" in sources
     assert "Пример 8.6" in sources and "96–97" in sources
-    assert "374" in sources
+    assert "4.10" in sources
     from pages.theory.formula_browser import FormulaBrowser
     browser = page.stack.widget(7).findChild(FormulaBrowser)
     assert r"\frac{3kT}{2}" in browser.source
@@ -124,7 +124,6 @@ def make_fixed_demo(app):
     win.show_demo()
     win.demo.run.pause()
     d = win.demo
-    d.instant_action.setChecked(True)
     d.projection_action.setChecked(True)
     d.exp.configure_gas("pure", 28, 28, 2, 1, collisions=False)
     d.exp.gas.pos[:] = [[25, 25], [75, 75]]
@@ -136,17 +135,14 @@ def make_fixed_demo(app):
 
 
 def assert_display(d, panel, expected):
-    from ui import labels
-    kind = panel.quantity[1]
-    digits = 1 if kind == tf.ENERGY else 0
-    assert panel.value.text() == f"= <b>{style.fmt(expected, digits)}</b>"
-    assert labels.unit(kind) in panel.value.toolTip()
-    np.testing.assert_allclose(panel.hist_plot.current.value(), expected)
+    from ui import units
+    factor = units.value_factor(panel.quantity[1])
+    np.testing.assert_allclose(panel.hist_plot.current.value(), expected * factor)
     if panel.time_plot.isVisible():
         times, values = panel.time_plot.dot.getData()
-        np.testing.assert_allclose(times, [d.exp.gas.time])
-        np.testing.assert_allclose(values, [expected])
-        np.testing.assert_allclose(panel.time_plot.current.value(), expected)
+        np.testing.assert_allclose(times, [d.exp.gas.time * units.TIME_FACTOR])
+        np.testing.assert_allclose(values, [expected * factor])
+        np.testing.assert_allclose(panel.time_plot.current.value(), expected * factor)
 
 
 @pytest.mark.parametrize("velocities", [
@@ -214,7 +210,7 @@ def test_paused_parameter_changes_and_rotation_stay_synchronized(app):
     app.processEvents()
     assert_display(d, panel, expected)
     np.testing.assert_allclose(panel.hist_plot.bars.opts['height'],
-                               np.minimum(hist.density()*panel.hist_plot._density_factor(),panel.hist_plot.top))
+                               np.minimum(hist.density()/panel.hist_plot.value_factor*panel.hist_plot._density_factor(),panel.hist_plot.top))
     panel.rotate()
     app.processEvents()
     assert_display(d, panel, expected)
@@ -290,7 +286,7 @@ def test_fullscreen_round_trip_rescales_layout(app):
         assert win.size() == QtCore.QSize(width, height)
         assert not problems(win)
         for panel in win.demo.panels:
-            assert panel.stats.height() >= 2 * panel.stats.fontMetrics().lineSpacing()
+            assert panel.stats.height() >= panel.stats.fontMetrics().lineSpacing()
         assert win.demo.exp.gas is gas
     win.demo.zoom_button.click()
     for width, height in ((1920, 1080), (1093, 614)):

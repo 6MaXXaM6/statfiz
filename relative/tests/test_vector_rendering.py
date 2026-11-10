@@ -91,6 +91,8 @@ def test_arrows_can_cross_vessel_wall_without_hidden_inset_clipping(window, app)
     d = window.demo
     # В широком поле за квадратным сосудом достаточно места для целой стрелки.
     window.resize(1920, 800)
+    window.font_scale.apply()
+    QtTest.QTest.qWait(180)
     app.processEvents()
     d.exp.gas.pos[:] = [[1., 50.], [99., 50.]]
     d.exp.gas.vel[:] = [[-100., 0.], [100., 0.]]

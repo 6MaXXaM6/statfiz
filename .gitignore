@@ -2,7 +2,7 @@ relative/.venv-macos/
 relative/dist/macos/
 relative/build/macos/
 relative/build/smoke-macos.txt
-/build/windows-tools/
+/build/
 /dist/
 
 # macOS Finder metadata

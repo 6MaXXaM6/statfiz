@@ -104,6 +104,16 @@ def test_zoom_page_navigation_and_fullscreen_restore_vessel(win, app):
         QTest.keyClick(win, QtCore.Qt.Key_F11)
         QTest.qWait(180)
         assert win.isFullScreen()
+        # Отложенные resize/layout/font события могут занять больше 180 мс.
+        # Ждём готовую геометрию, не вызывая подгонку вручную из теста.
+        for _ in range(50):
+            free = d.body.height() - d.run_card.sizeHint().height() - d.left.layout().spacing()
+            expected = min(d.left.width(), free)
+            if (not d._box_fit_timer.isActive()
+                    and abs(d.box_card.maximumHeight() - expected) <= 1
+                    and abs(d.box_card.height() - expected) <= 2):
+                break
+            QTest.qWait(20)
         assert_box_fills_available_space(win)
         QTest.keyClick(win, QtCore.Qt.Key_Escape)
         QTest.qWait(180)
